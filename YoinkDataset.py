@@ -13,19 +13,16 @@
         ( In retrospective, it might have been faster that way... )
 """
 
-
-
-
-
-
 import os
+import re
 import requests
 import logging
-from tqdm import tqdm  # For the progress bar
+from tqdm import tqdm
 
 # Set up logging
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logging.basicConfig(level=logging.INFO, format="[%(levelname).4s] %(message)s")
 logger = logging.getLogger(__name__)
+
 
 def get_all_datasets(base_url):
     """
@@ -37,8 +34,8 @@ def get_all_datasets(base_url):
     Returns:
         list: List of dataset names.
     """
-    package_list_endpoint = "package_list"
-    response = requests.get(f"{base_url}{package_list_endpoint}")
+    package_list_endpoint = f"{base_url}package_list"
+    response = requests.get(package_list_endpoint)
 
     if response.status_code == 200:
         data = response.json()
@@ -47,40 +44,74 @@ def get_all_datasets(base_url):
         print(f"Error fetching dataset list. Status code: {response.status_code}")
         return []
 
+
 def download_datasets(base_url, package_list):
-    for package_name in package_list:
-        package_dir = os.path.join("datasets", package_name)
+    for package_index, package_name in enumerate(package_list):
+        package_log_info = f"package {package_index + 1}/{len(package_list)} ({package_name})"
+
+        endpoint = f"{base_url}package_show?id={package_name}"
+        response = requests.get(endpoint)
+
+        if response.status_code != 200:
+            logger.error(f"Error fetching details for {package_log_info}: "
+                         f"status code {response.status_code}.")
+            continue
+
+        try:
+            data = response.json()
+        except Exception as e:
+            logger.error(f"Error parsing JSON for {package_log_info}: {e}.")
+            continue
+
+        package_success = data.get("success", False)
+        package_result = data.get("result")
+        if not (package_success and package_result):
+            logger.error(f"Error fetching details for {package_log_info}: "
+                         f"unsuccessful.")
+            continue
+
+        package_title = package_result.get("title")
+        if not package_title:
+            package_title = package_name
+        package_dir = os.path.join("datasets", re.sub(r'[\\/:*?"<>|]', "", package_title))
         os.makedirs(package_dir, exist_ok=True)
 
-        package_show_endpoint = f"package_show?id={package_name}"
-        response = requests.get(f"{base_url}{package_show_endpoint}")
+        resource_list = package_result.get("resources", [])
+        for resource_index, resource in enumerate(resource_list):
+            resource_log_info = f"resource {resource_index + 1}/{len(resource_list)} for {package_log_info}"
 
-        if response.status_code == 200:
-            data = response.json()
-            resources = data.get("result", {}).get("resources", [])
+            resource_format = resource.get("format")
+            resource_name = resource.get("name")
+            resource_url = resource.get("url")
 
-            for resource in resources:
-                resource_name = resource.get("name")
-                resource_url = resource.get("url")
+            if not (resource_format and resource_name and resource_url):
+                logger.warning(f"Skipping {resource_log_info}: missing metadata.")
+                continue
 
-                if resource_name and resource_url:
-                    try:
-                        response = requests.get(resource_url, stream=True)  # Stream the content
-                        total_size = int(response.headers.get("content-length", 0))
+            resource_format = resource_format.lower()
+            if resource_format not in ["csv", "xlsx", "xls", "json", "sqlite", "pdf"]:
+                logger.warning(f"Skipping {resource_log_info}: incompatible format.")
+                continue
 
-                        # Initialize the progress bar
-                        with tqdm(total=total_size, unit="B", unit_scale=True, desc=resource_name) as pbar:
-                            with open(os.path.join(package_dir, resource_name), "wb") as f:
-                                for chunk in response.iter_content(chunk_size=1024):
-                                    if chunk:
-                                        f.write(chunk)
-                                        pbar.update(len(chunk))
+            resource_dir = os.path.join(package_dir, re.sub(r'[\\/:*?"<>|]', "", resource_name) + "." + resource_format)
+            try:
+                resource_response = requests.get(resource_url, stream=True)
+                resource_size = int(resource_response.headers.get("content-length", 0))
+                description = (f"Downloading resource {resource_index + 1}/{len(resource_list)} "
+                               f"of package {package_index + 1}/{len(package_list)}")
 
-                        logger.info(f"Downloaded: {resource_name}")
-                    except Exception as e:
-                        logger.error(f"Error downloading {resource_name}: {e}")
-        else:
-            logger.error(f"Error fetching details for package {package_name}")
+                with tqdm(total=resource_size, unit="B", unit_scale=True, desc=description) as progress_bar:
+                    with open(resource_dir, "wb") as file:
+                        for chunk in resource_response.iter_content(chunk_size=1024):
+                            if not chunk:
+                                continue
+                            file.write(chunk)
+                            progress_bar.update(len(chunk))
+            except Exception as e:
+                logger.error(f"Error downloading {resource_log_info}: {e}.")
+                os.remove(resource_dir)
+                continue
+
 
 if __name__ == "__main__":
     base_url = "https://www.donneesquebec.ca/recherche/api/3/action/"
