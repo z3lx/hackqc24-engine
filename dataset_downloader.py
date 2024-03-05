@@ -3,6 +3,7 @@ dataset_downloader.py
 Downloads all datasets from the Données Québec portal using the CKAN API.
 """
 
+import argparse
 import os
 import re
 import time
@@ -22,7 +23,7 @@ def sanitize_filename(filename: str) -> str:
     Returns:
         str: The sanitized filename.
     """
-    return re.sub(r'[\\/:*?"<>|]', "", filename)
+    return re.sub(r"[\\/:*?\"<>|]", "", filename)
 
 
 def get_package_list() -> list[str]:
@@ -143,4 +144,13 @@ def get_packages(output_dir: str = "", package_list: list[str] = None, max_retri
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="[%(levelname).4s] %(message)s")
-    get_packages()
+
+    parser = argparse.ArgumentParser(description="Download packages from the Données Québec portal using the CKAN API.")
+    parser.add_argument("--output_dir", type=str, default="", help="The directory where the downloaded packages will be stored.")
+    parser.add_argument("--package_list", type=str, nargs="+", default=None, help="The list of package names to download.")
+    parser.add_argument("--max_retries", type=int, default=12, help="The maximum number of retries for each download attempt.")
+    parser.add_argument("--delay", type=int, default=5, help="The delay (in seconds) between each retry.")
+
+    args = parser.parse_args()
+
+    get_packages(output_dir=args.output_dir, package_list=args.package_list, max_retries=args.max_retries, delay=args.delay)
