@@ -13,10 +13,26 @@ from tqdm import tqdm
 
 
 def sanitize_filename(filename: str) -> str:
+    """
+    Sanitizes the filename by removing any characters that are not allowed in filenames.
+
+    Args:
+        filename (str): The original filename.
+
+    Returns:
+        str: The sanitized filename.
+    """
     return re.sub(r'[\\/:*?"<>|]', "", filename)
 
 
 def get_package_list() -> list[str]:
+    """
+    Fetches the package list from the Données Québec using the CKAN API.
+
+    Returns:
+        list[str]: The list of package names. If an error occurs, an empty list is returned.
+    """
+
     logger = logging.getLogger(__name__)
     base_url = "https://www.donneesquebec.ca/recherche/api/3/action/"
     package_list_endpoint = f"{base_url}package_list"
@@ -35,6 +51,16 @@ def get_package_list() -> list[str]:
 
 
 def get_packages(output_dir: str = "", package_list: list[str] = None, max_retries: int = 12, delay: int = 5) -> None:
+    """
+    Downloads all packages from the Données Québec portal using the CKAN API.
+
+    Args:
+        output_dir (str, optional): The directory where the downloaded packages will be stored. Defaults to the current directory.
+        package_list (list[str], optional): The list of package names to download. If None, all packages will be downloaded. Defaults to None.
+        max_retries (int, optional): The maximum number of retries for each download attempt. Defaults to 12.
+        delay (int, optional): The delay (in seconds) between each retry. Defaults to 5.
+    """
+
     if package_list is None:
         package_list = get_package_list()
 
