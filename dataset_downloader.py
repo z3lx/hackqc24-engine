@@ -1,16 +1,6 @@
 """
-    Hallo!
-
-    This program will download all the datasets to $workingDirectory/dataset/$datasetName
-
-    I have yet to implement the metadata stuff.
-
-    Another issue is that sometimes you'll have to wait for the program to time out due to inaccessible ressources.
-        I have no clue why they'd list them in the database if we can't grab them, but I might be doing smt wrong so who knows.
-        It appears to happen with most HTML documents with geo data. Maybe it's trying to crawl the website all the way up to Google Earth?:
-
-    This program was mostly written by AI since I couldn't be fucked to read the CKAN documentation myself.
-        ( In retrospective, it might have been faster that way... )
+dataset_downloader.py
+Downloads all datasets from the Données Québec portal using the CKAN API.
 """
 
 import os
@@ -21,33 +11,36 @@ import requests
 import logging
 from tqdm import tqdm
 
-# Set up logging
-logging.basicConfig(level=logging.INFO, format="[%(levelname).4s] %(message)s")
-logger = logging.getLogger(__name__)
+
+def sanitize_filename(filename: str) -> str:
+    return re.sub(r'[\\/:*?"<>|]', "", filename)
 
 
-def get_all_datasets(base_url):
-    """
-    Retrieves a list of all datasets from the Données Québec portal.
-
-    Args:
-        base_url (str): Base URL for the CKAN API.
-
-    Returns:
-        list: List of dataset names.
-    """
+def get_package_list() -> list[str]:
+    logger = logging.getLogger(__name__)
+    base_url = "https://www.donneesquebec.ca/recherche/api/3/action/"
     package_list_endpoint = f"{base_url}package_list"
     response = requests.get(package_list_endpoint)
 
-    if response.status_code == 200:
+    if response.status_code != 200:
+        logger.error(f"Error fetching package list: "
+                     f"status code {response.status_code}.")
+        return []
+    try:
         data = response.json()
         return data.get("result", [])
-    else:
-        print(f"Error fetching dataset list. Status code: {response.status_code}")
+    except Exception as e:
+        logger.error(f"Error parsing JSON for package list: {e}.")
         return []
 
 
-def download_datasets(base_url, package_list, max_retries=12, delay=5):
+def get_packages(output_dir: str = "", package_list: list[str] = None, max_retries: int = 12, delay: int = 5) -> None:
+    if package_list is None:
+        package_list = get_package_list()
+
+    logger = logging.getLogger(__name__)
+    base_url = "https://www.donneesquebec.ca/recherche/api/3/action/"
+
     for package_index, package_name in enumerate(package_list):
         package_log_info = f"package {package_index + 1}/{len(package_list)} ({package_name})"
 
@@ -75,7 +68,7 @@ def download_datasets(base_url, package_list, max_retries=12, delay=5):
         package_title = package_result.get("title")
         if not package_title:
             package_title = package_name
-        package_dir = os.path.join("datasets", re.sub(r'[\\/:*?"<>|]', "", package_title))
+        package_dir = os.path.join(output_dir, "datasets", sanitize_filename(package_title))
         os.makedirs(package_dir, exist_ok=True)
 
         resource_list = package_result.get("resources", [])
@@ -95,7 +88,7 @@ def download_datasets(base_url, package_list, max_retries=12, delay=5):
                 logger.warning(f"Skipping {resource_log_info}: incompatible format.")
                 continue
 
-            resource_dir = os.path.join(package_dir, re.sub(r'[\\/:*?"<>|]', "", resource_name) + "." + resource_format)
+            resource_dir = os.path.join(package_dir, f"{sanitize_filename(resource_name)}.{resource_format}")
             for retry_index in range(max_retries):
                 try:
                     resource_response = requests.get(resource_url, stream=True)
@@ -123,6 +116,5 @@ def download_datasets(base_url, package_list, max_retries=12, delay=5):
 
 
 if __name__ == "__main__":
-    base_url = "https://www.donneesquebec.ca/recherche/api/3/action/"
-    all_datasets = get_all_datasets(base_url)
-    download_datasets(base_url, all_datasets)
+    logging.basicConfig(level=logging.INFO, format="[%(levelname).4s] %(message)s")
+    get_packages()
