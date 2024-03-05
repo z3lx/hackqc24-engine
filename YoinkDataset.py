@@ -15,6 +15,8 @@
 
 import os
 import re
+import time
+
 import requests
 import logging
 from tqdm import tqdm
@@ -45,7 +47,7 @@ def get_all_datasets(base_url):
         return []
 
 
-def download_datasets(base_url, package_list):
+def download_datasets(base_url, package_list, max_retries=12, delay=5):
     for package_index, package_name in enumerate(package_list):
         package_log_info = f"package {package_index + 1}/{len(package_list)} ({package_name})"
 
@@ -94,23 +96,30 @@ def download_datasets(base_url, package_list):
                 continue
 
             resource_dir = os.path.join(package_dir, re.sub(r'[\\/:*?"<>|]', "", resource_name) + "." + resource_format)
-            try:
-                resource_response = requests.get(resource_url, stream=True)
-                resource_size = int(resource_response.headers.get("content-length", 0))
-                description = (f"Downloading resource {resource_index + 1}/{len(resource_list)} "
-                               f"of package {package_index + 1}/{len(package_list)}")
+            for retry_index in range(max_retries):
+                try:
+                    resource_response = requests.get(resource_url, stream=True)
+                    resource_size = int(resource_response.headers.get("content-length", 0))
+                    description = (f"Downloading resource {resource_index + 1}/{len(resource_list)} "
+                                   f"of package {package_index + 1}/{len(package_list)}")
 
-                with tqdm(total=resource_size, unit="B", unit_scale=True, desc=description) as progress_bar:
-                    with open(resource_dir, "wb") as file:
-                        for chunk in resource_response.iter_content(chunk_size=1024):
-                            if not chunk:
-                                continue
-                            file.write(chunk)
-                            progress_bar.update(len(chunk))
-            except Exception as e:
-                logger.error(f"Error downloading {resource_log_info}: {e}.")
-                os.remove(resource_dir)
-                continue
+                    with tqdm(total=resource_size, unit="B", unit_scale=True, desc=description) as progress_bar:
+                        with open(resource_dir, "wb") as file:
+                            for chunk in resource_response.iter_content(chunk_size=1024):
+                                if not chunk:
+                                    continue
+                                file.write(chunk)
+                                progress_bar.update(len(chunk))
+                    break
+                except Exception as e:
+                    logger.error(f"Error downloading {resource_log_info}: {e}.")
+                    logger.info(f"Retrying in {delay} second(s)... "
+                                f"{max_retries - retry_index - 1} retrie(s) remaining.")
+                    if os.path.exists(resource_dir):
+                        os.remove(resource_dir)
+                    if retry_index < max_retries - 1:
+                        time.sleep(delay)
+                    continue
 
 
 if __name__ == "__main__":
