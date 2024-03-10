@@ -20,6 +20,28 @@ def parse_dataset(dataset_path:str) -> list[list[str]]:
     
     return dataset
 
+def create_metadata(row:list[str], format:dict) -> dict:
+    """
+    Creates the metadata for a specific row in a CSV file.
+    
+    Args:
+        row (list[str]): The row we want to create metadata for.
+        format (dict): The way the metadata is stored in a particular CSV file, type_of_information:row_index (ie: {title:0, publication date:1, url:2})
+        
+    Returns:
+        dict: The metadata for the given row.
+    """
+    
+    metadata = {}
+    for type_of_information in format.keys():
+        try:
+            row_index = format[type_of_information]
+            metadata[type_of_information] = row[row_index]
+        except IndexError:
+            metadata[type_of_information] = None
+    
+    return metadata
+
 
     
 
@@ -27,4 +49,3 @@ if __name__ == "__main__":
     chunks = []
     
     first_dataset = parse_dataset("datasets\\Communiqués de presse\\Communiqués de presse (2023 à aujourd'hui).csv")
-    
