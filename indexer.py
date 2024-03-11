@@ -1,3 +1,4 @@
+import argparse
 import json
 import os
 from typing import Union, List, Literal
@@ -72,8 +73,32 @@ def update_index(docs: Union[List[Document], str],
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Update index with given documents.")
+    parser.add_argument("--docs", type=str, required=True,
+                        help="Path to the documents or a list of Document objects.")
+    parser.add_argument("--db-path", type=str, required=True,
+                        help="Path to the database.")
+    parser.add_argument("--db-type", type=str, default="Chroma",
+                        help="Type of the database. Defaults to \"Chroma\".")
+    parser.add_argument("--namespace", type=str, default=None,
+                        help="Namespace for the record manager. Defaults to \"db_type/indexing\".")
+    parser.add_argument("--source", type=str, default="source",
+                        help="Key to use for the source ID in the index. Defaults to \"source\".")
+    parser.add_argument("--embedding", type=str, default="text-embedding-3-small",
+                        help="OpenAI embedding model name to use for creating embeddings. "
+                             "Defaults \"text-embedding-3-small\".")
+    parser.add_argument("--cleanup", type=str, default="full", choices=["incremental", "full", None],
+                        help="Cleanup strategy to use when indexing. Defaults to \"full\".")
+
+    args = parser.parse_args()
+
     result = update_index(
-        docs="./datasets/",
-        db_path="./chromadb"
+        docs=args.docs,
+        db_path=args.db_path,
+        db_type=args.db_type,
+        namespace=args.namespace,
+        source_key=args.source,
+        embedding_function=args.embedding,
+        cleanup=args.cleanup
     )
     print(result)
