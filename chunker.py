@@ -84,7 +84,7 @@ def chunkAsFile(title: str, dataset: list[list[str]], format:dict, index_of_desc
                 text_chunks = TokenTextSplitter(chunk_size=4096, chunk_overlap = 20).split_text(text=row[index_of_description])
                 for text in text_chunks:
                     f1.write(text) # write page content as txt file
-                    json.dump(metadata, f2) # write metadeta as JSON
+                    json.dump(metadata, f2, ensure_ascii=False) # write metadeta as JSON
                     index += 1 # A row can have multiple chunks
     
 
