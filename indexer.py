@@ -12,6 +12,14 @@ from langchain_core.documents.base import Document
 
 
 def clear_index(db_path: str, db_type: str = "Chroma", namespace: str = None) -> None:
+    """
+    Clears the index in the given database.
+
+    Parameters:
+        db_path (str): The path to the database.
+        db_type (str, optional): The type of the database. Defaults to "Chroma".
+        namespace (str, optional): The namespace for the record manager. Defaults to "db_type/indexing".
+    """
     update_index([], db_path=db_path, db_type=db_type, namespace=namespace, cleanup="full")
 
 
@@ -19,6 +27,33 @@ def update_index(docs: Union[List[Document], str],
                  db_path: str, db_type: str = "Chroma", namespace: str = None, source_key: str = "source",
                  embedding_function: Union[Embeddings, str] = OpenAIEmbeddings(model="text-embedding-3-small"),
                  cleanup: Union[Literal["incremental", "full"], None] = "full") -> IndexingResult:
+    """
+    Updates the index with the given documents.
+
+    Parameters:
+        docs (Union[List[Document], str]): The documents to index. This can be a list of Document objects or
+            a string representing the path to a directory containing the documents.
+        db_path (str): The path to the database.
+        db_type (str, optional): The type of the database. Defaults to "Chroma".
+        namespace (str, optional): The namespace for the record manager. Defaults to "db_type/indexing".
+        source_key (str, optional): The key to use for the source ID in the index. Defaults to "source".
+        embedding_function (Union[Embeddings, str], optional): The function to use for creating embeddings.
+            This can be an Embeddings object or a string representing the name of the OpenAI embedding model to use.
+            Defaults to OpenAIEmbeddings(model="text-embedding-3-small").
+        cleanup (Union[Literal["incremental", "full"], None], optional): The cleanup strategy to use when indexing.
+            This can be "incremental", "full", or None. Defaults to "full".
+
+    Returns:
+        IndexingResult: The result of the indexing operation.
+
+    Raises:
+        ValueError: Raised if:
+            the docs parameter is not a list of Document objects or a valid path;
+            the db_path does not exist;
+            the db_type is not supported;
+            the embedding function or vector store cannot be created.
+    """
+
     # Load documents
     if isinstance(docs, str):
         path = docs
