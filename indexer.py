@@ -10,6 +10,10 @@ from langchain_openai import OpenAIEmbeddings
 from langchain_core.documents.base import Document
 
 
+def clear_index(db_path: str, db_type: str = "Chroma", namespace: str = None) -> None:
+    update_index([], db_path=db_path, db_type=db_type, namespace=namespace, cleanup="full")
+
+
 def update_index(docs: Union[List[Document], str],
                  db_path: str, db_type: str = "Chroma", namespace: str = None, source_key: str = "source",
                  embedding_function: Union[Embeddings, str] = OpenAIEmbeddings(model="text-embedding-3-small"),
