@@ -37,7 +37,7 @@ def update_index(docs: Union[List[Document], str],
 
     # Create record manager
     os.makedirs(db_path, exist_ok=True)
-    record_namespace = namespace if namespace is not None or str else f"{db_type.lower()}/indexing"
+    record_namespace = namespace if namespace is not None else f"{db_type.lower()}/indexing"
     record_path = os.path.join(db_path, "record_manager_cache.sql")
     record_manager = SQLRecordManager(
         namespace=record_namespace,
