@@ -2,7 +2,17 @@ import csv
 import requests
 from bs4 import BeautifulSoup
 
-def scrape_text(url):
+def scrape_montreal(url: str) -> str:
+    """
+    Scrapes article content from montreal.ca
+    
+    Args:
+        url (str): url of the montreal.ca article
+        
+    Returns
+        str: Article content of the page.
+    """
+    
     try:
         # Send a GET request to the URL
         response = requests.get(url)
@@ -27,23 +37,3 @@ def scrape_text(url):
         print("Error occurred while scraping URL:", url)
         print("Error:", e)
         return None
-
-# Function to read URLs from a CSV file
-def read_urls_from_csv():
-    file_path = 'datasets\\Communiqués de presse\\Communiqués de presse (2023 à aujourd\'hui).csv'
-    urls = []
-    with open(file_path, 'r', encoding='utf-8') as csv_file:
-        csv_reader = csv.reader(csv_file)
-        for row in csv_reader:
-            if len(row) >= 3:  # Ensure the row has at least 3 columns
-                urls.append(row[2])  # Assuming URLs are in the third column
-    return urls
-
-# Example usage
-urls = read_urls_from_csv()
-for url in urls:
-    extracted_text = scrape_text(url)
-    if extracted_text:
-        print("URL:", url)
-        print("Extracted text:\n", extracted_text)
-        print("\n")
