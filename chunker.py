@@ -44,25 +44,40 @@ def create_metadata(row:list[str], format:dict) -> dict:
     
     return metadata
 
-def chunk(dataset: list[list[str]], format:dict, index_of_description: str) -> None:
+def chunkAsDocument(dataset: list[list[str]], format:dict, index_of_description: str) -> list[Document]:
     """
-    Chunks a dataset into by the different information and corresponding metadata.
+    Chunks a dataset by the different information and corresponding metadata into a list of Document objects.
     
     Args:
         dataset(list[list[[str]]): The CSV file we want to chunk, must contain a list of rows, each row containing a list of information
         format (dict): The way the metadata is stored in a particular CSV file, type_of_information:index (ie: {title:0, publication date:1, url:2})
         index_of_description (str): Index of where the information is in the CSV file
+        
+    Return:
+        list[Document]: List of Document objects representing the different chunks.
     """
+    documents = []
     
     for row in dataset: 
         metadata = create_metadata(row=row, format=format)
         text_chunks = TokenTextSplitter(chunk_size=4096, chunk_overlap = 20).split_text(text=row[index_of_description])
         for text in text_chunks:
             documents.append(Document(page_content=text, metadata=metadata))
+            
+    return documents
+    
+def chunkAsFile(dataset: list[list[str]], format:dict, index_of_description: str) -> None:
+    """
+    Chunks a dataset by the different information and corresponding metadata and write them into 2 separate files (ie: chunk1.txt, chunk1.meta (JSON)).
+    
+    Args:
+        dataset(list[list[[str]]): The CSV file we want to chunk, must contain a list of rows, each row containing a list of information
+        format (dict): The way the metadata is stored in a particular CSV file, type_of_information:index (ie: {title:0, publication date:1, url:2})
+        index_of_description (str): Index of where the information is in the CSV file
+        
+    """
     
 
 if __name__ == "__main__":
-    documents = []
-    
     first_dataset = parse_dataset("datasets\\Communiqués de presse\\Communiqués de presse (2023 à aujourd'hui).csv")
-    chunk(dataset=first_dataset, format={"title":0,"publication date":1,"url":2,"district service":4,"source":5}, index_of_description=3)
+    documents = chunkAsDocument(dataset=first_dataset, format={"title":0,"publication date":1,"url":2,"district service":4,"source":5}, index_of_description=3)
