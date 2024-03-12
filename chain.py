@@ -3,30 +3,11 @@ from operator import itemgetter
 
 from langchain.memory import ConversationBufferMemory
 from langchain_community.vectorstores.chroma import Chroma
-from langchain_core.messages import SystemMessage, HumanMessage
-from langchain_core.output_parsers import StrOutputParser
-from langchain_core.prompts import ChatPromptTemplate, PromptTemplate, MessagesPlaceholder
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.runnables import RunnablePassthrough, RunnableLambda
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 
 os.environ["LANGCHAIN_TRACING_V2"] = "true"
-
-# Language chain
-lang_prompt = PromptTemplate.from_template(
-    "What language is the following text written in?\n"
-    "text=\"{text}\"\n"
-    "Reply in a singular word."
-)
-lang_model = ChatOpenAI(
-    model="gpt-3.5-turbo-0125",
-    temperature=0
-)
-lang_chain = (
-    {"text": RunnablePassthrough()}
-    | lang_prompt
-    | lang_model
-    | StrOutputParser()
-)
 
 model = ChatOpenAI(model="gpt-3.5-turbo-0125")
 embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
@@ -47,7 +28,6 @@ prompt = ChatPromptTemplate.from_messages([
 chain = (
     {"context": retriever,
      "message": RunnablePassthrough(),
-     #"language": lang_chain
      }
     | RunnablePassthrough.assign(
         history=RunnableLambda(memory.load_memory_variables) | itemgetter("history")
