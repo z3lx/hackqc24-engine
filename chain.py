@@ -21,7 +21,8 @@ retriever = db.as_retriever(search_kwargs={"k": 1})
 
 prompt = ChatPromptTemplate.from_messages([
     MessagesPlaceholder(variable_name="history"),
-    ("system", "Answer the user with the following context:\n{context}"),
+    ("system", "Answer the user with the following context:\n{context}\n\n"
+               "If the answer is not within the context, do not invent new information and let the user know."),
     ("user", "{message}")
 ])
 
