@@ -45,16 +45,21 @@ def create_metadata(row:list[str], format:dict) -> dict:
     
     return metadata
 
-def createDocuments(title:str, dataset: list[list[str]], format:dict, index_of_description: int) -> None:
+def create_documents(dataset: list[list[str]], format:dict, index_of_description: int, save_as_file:bool, save_as_list:bool) -> list[Document]:
     """
     Creates a Document from for every row in a CSV dataset
     
     Args:
-        title (str): Title of the dataset
         dataset (list[list[[str]]): The CSV file we want to create Documents for, must contain a list of rows, each row containing a list of information
         format (dict): The way the metadata is stored in a particular CSV file, type_of_information:index (ie: {title:0, publication date:1, url:2})
         index_of_description (int): Index of where the information is in the CSV file
+        save_as_file (boolean): Says if we want to write all the chunks as txt and json files, writes in "chunks" project directory.
+        save_as_list (boolean): Says if we want to save all the chunks as a list of Documents in memory.
+        
+    Returns:
+        list[Document]: A list of Documents if save_as_list is true, returns Nothing otherwise.
     """
+    
     documents = []
     
     for index, row in enumerate(dataset): 
@@ -64,9 +69,20 @@ def createDocuments(title:str, dataset: list[list[str]], format:dict, index_of_d
             index_of_url = format["url"]
             url = row[index_of_url]
             page_content += web_scraper.scrape_montreal(url)
-        with open(f"chunks/{title}{index}.txt", "w", encoding="utf-8") as f1:
-            with open(f"chunks/{title}{index}.meta", "w", encoding="utf-8") as f2:
-                f1.write(page_content)
-                json.dump(metadata, f2, ensure_ascii=False)
-                print(f"Document {index+1}/{len(dataset)} created       {round(((index+1)/len(dataset) * 100), 2)}% Done")
+        
+        if save_as_file:
+            with open(f"chunks/document{index}.txt", "w", encoding="utf-8") as f1:
+                with open(f"chunks/document{index}.meta", "w", encoding="utf-8") as f2:
+                    f1.write(page_content)
+                    json.dump(metadata, f2, ensure_ascii=False)
+                    print(f"Document {index+1}/{len(dataset)} created       {round(((index+1)/len(dataset) * 100), 2)}% Done")
+                    
+        if save_as_list:
+            document = Document(page_content=page_content)
+            document.metadata = metadata
+            documents.append(document)
+        
+    if save_as_file:
+        return documents
+    return None
             
