@@ -4,39 +4,6 @@ import time
 from data_utils import save_txt
 import link_getter
 
-def error_wrapper(func, url, **kwargs):
-    """
-    Wrapper function to handle errors related to requests while running the function.
-
-    Args:
-        func (Function): a function that takes a response object and returns a value
-        url (str): url of the webpage
-
-    Returns:
-        Any: returns the value returned by the function or None if an error occurs
-    """
-    retries = 5
-    retry_time = 60
-    try:
-        response = requests.get(url)
-        if response.status_code == 200:
-            return func(response, **kwargs)
-        else:
-            print(f"Failed to retrieve {url}. Status code:", response.status_code)
-            for retry in range(retries):
-                print(f"Retrying in {retry_time} seconds...")
-                print(f"{retries - retry} retrie(s) left.")
-                time.sleep(retry_time)
-                response = requests.get(url)
-                if response.status_code == 200:
-                    return func(response, **kwargs)
-        print(f"Couldn't retrieve {url}") 
-        return None
-    except Exception as e:
-        print(f"Error occurred while running {func.__name__}")
-        print("Error:", e)
-        return None
-    
 def get_metadata(soup: BeautifulSoup) -> dict:
     """
     Extracts metadata from a webpage.
@@ -57,9 +24,78 @@ def get_metadata(soup: BeautifulSoup) -> dict:
             metadata[meta.get("name")] = meta.get("content")
     return metadata
 
+def response_wrapper(response, func: callable, path: str,  save_file: bool = True) -> str:
+    """
+    Wrapper function to handle the response object obtained from requests.get. 
+    It uses the user defined function to extract content from the webpage.
+
+    Args:
+        response (_type_): response object obtained from requests.get
+        func (callable): a function defined by caller to extract content from the webpage. Takes a BeautifulSoup object and returns a string.
+        path (str): path to save the file
+        save_file (bool, optional): if True, saves the content to a file. Defaults to True.
+
+    Returns:
+        str: Article content of the page.
+    """
+    soup = BeautifulSoup(response.text, 'html.parser') 
+    content = func(soup)     
+    if save_file: 
+        metadata = get_metadata(soup)
+        save_txt(content, metadata, path)
+    return content
+
+def error_wrapper(url: str, func: callable,**kwargs):
+    """
+    Wrapper function to handle errors related to requests while running the function.
+
+    Args:
+        func (Function): a function that takes a beautifulsoup object and returns a string
+        url (str): url of the webpage
+
+    Returns:
+        Any: returns the value returned by the function or None if an error occurs
+    """
+    retries = 5
+    retry_time = 60
+    try:
+        response = requests.get(url)
+        if response.status_code == 200:
+            return response_wrapper(response, func, **kwargs)
+        else:
+            print(f"Failed to retrieve {url}. Status code:", response.status_code)
+            for retry in range(retries):
+                print(f"Retrying in {retry_time} seconds...")
+                print(f"{retries - retry} retrie(s) left.")
+                time.sleep(retry_time)
+                response = requests.get(url)
+                if response.status_code == 200:
+                    return response_wrapper(response, func, **kwargs)
+        print(f"Couldn't retrieve {url}") 
+        return None
+    except Exception as e:
+        print(f"Error occurred while running {func.__name__}")
+        print("Error:", e)
+        return None
+
+def scrape(url: str, func: callable, path: str, save_file: bool = True) -> str:
+    """
+    General scrape function that accepts a user defined function to extract content from a webpage.
+
+    Args:
+        url (str): url of the webpage
+        func (callable): a function defined by caller to extract content from the webpage. Takes a BeautifulSoup object and returns a string.
+        path (str): path to save the file
+        save_file (bool): if True, saves the content to a file. Defaults to True.
+
+    Returns:
+        str: Article content of the page.
+    """
+    return error_wrapper(url, func, path=path, save_file=save_file)
+
 def scrape_montreal(url: str, path: str, save_file: bool = True) -> str:
     """
-    Scrapes article content from montreal.ca
+    Function specifically for scraping montreal.ca articles.
     
     Args:
         url (str): url of the montreal.ca article
@@ -69,22 +105,17 @@ def scrape_montreal(url: str, path: str, save_file: bool = True) -> str:
     Returns:
         str: Article content of the page.
     """
-    def func(response, path, save_file):
-        soup = BeautifulSoup(response.text, 'html.parser') 
-        divs = soup.find_all('div', class_='content-modules') 
-        content = "".join([div.get_text() for div in divs])        
-        metadata = get_metadata(soup) #
-
-        if save_file: 
-            metadata = get_metadata(soup)
-            save_txt(content, metadata, path)
+    # Specific function to extract content from montreal.ca
+    def func(soup: BeautifulSoup) -> str:
+        divs = soup.find_all('div', class_='field--name-body')
+        content = "\n".join([div.get_text() for div in divs])
         return content
     
-    return error_wrapper(func, url, path=path, save_file=save_file)
+    return scrape(url, func, path, save_file)
 
 def scrape_quebec(url: str, path: str, save_file: bool = True) -> str:
     """
-    Scrapes article content from quebec.ca
+    Function specifically for scraping quebec.ca articles.
 
     Args:
         url (str): url of the quebec.ca article
@@ -95,17 +126,13 @@ def scrape_quebec(url: str, path: str, save_file: bool = True) -> str:
         str: Article content of the page.
     """
     
-    def func(response, path, save_file):
-        soup = BeautifulSoup(response.text, 'html.parser')
-        divs = soup.find_all('div', class_='ce-bodytext')
+    # Specific function to extract content from quebec.ca
+    def func(soup: BeautifulSoup) -> str:
+        divs = soup.find_all('div', class_='field--name-field-contenu')
         content = "\n".join([div.get_text() for div in divs])
-        
-        if save_file: 
-            metadata = get_metadata(soup)
-            save_txt(content, metadata, path)
         return content
     
-    return error_wrapper(func, url, path=path, save_file=save_file)
+    return scrape(url, func, path, save_file)
     
 def scrape_quebec_article_page():
     """
