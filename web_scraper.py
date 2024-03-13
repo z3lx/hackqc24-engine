@@ -1,8 +1,8 @@
 from bs4 import BeautifulSoup
 import requests
-import time
 from data_utils import save_txt
 import link_getter
+from error import error_wrapper
 
 def get_metadata(soup: BeautifulSoup) -> dict:
     """
@@ -45,39 +45,6 @@ def response_wrapper(response, func: callable, path: str,  save_file: bool = Tru
         save_txt(content, metadata, path)
     return content
 
-def error_wrapper(url: str, func: callable,**kwargs):
-    """
-    Wrapper function to handle errors related to requests while running the function.
-
-    Args:
-        func (Function): a function that takes a beautifulsoup object and returns a string
-        url (str): url of the webpage
-
-    Returns:
-        Any | None: returns the value returned by the function or None if an error occurs
-    """
-    retries = 5
-    retry_time = 120
-    try:
-        response = requests.get(url)
-        if response.status_code == 200:
-            return response_wrapper(response, func, **kwargs)
-        else:
-            print(f"Failed to retrieve {url}. Status code:", response.status_code)
-            for retry in range(retries):
-                print(f"Retrying in {retry_time} seconds...")
-                print(f"{retries - retry} retrie(s) left.")
-                time.sleep(retry_time)
-                response = requests.get(url)
-                if response.status_code == 200:
-                    return response_wrapper(response, func, **kwargs)
-                print(f"Failed to retrieve {url}. Status code:", response.status_code)
-        return None
-    except Exception as e:
-        print(f"Error occurred while running {func.__name__}")
-        print("Error:", e)
-        return None
-
 def scrape(url: str, func: callable, path: str, save_file: bool = True) -> str:
     """
     General scrape function that accepts a user defined function to extract content from a webpage.
@@ -91,7 +58,7 @@ def scrape(url: str, func: callable, path: str, save_file: bool = True) -> str:
     Returns:
         str: Article content of the page.
     """
-    return error_wrapper(url, func, path=path, save_file=save_file)
+    return error_wrapper(url, response_wrapper, retry_time=60, func=func, path=path, save_file=save_file)
 
 def scrape_montreal(url: str, path: str, save_file: bool = True) -> str:
     """
@@ -140,7 +107,7 @@ def scrape_quebec_article_page():
     """
     
     i = 0
-    links = link_getter.get_base_links()
+    links = link_getter.get_quebec_base_links()
     if (links == None):
         print("Failed to retrieve links")
         return None
@@ -160,7 +127,7 @@ def scrape_quebec_article_page():
         print(f"{len(links)}\n")
 
 def write_quebec_links():
-    links = link_getter.get_base_links()
+    links = link_getter.get_quebec_base_links()
     if (links == None):
         print("Failed to retrieve links")
         return None
