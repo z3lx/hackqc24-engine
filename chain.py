@@ -29,13 +29,13 @@ class ChatBot:
             ("system", "Answer {role} (user) with the following context:\n{context}\n\n"
                        "If the answer is not within the context or the history, "
                        "do not invent new information and let {role} (user) know."),
-            ("user", "{role}: {message}")
+            ("user", "{role}: {content}")
         ])
 
         self.main = (
-            {"context": self.retriever,
+            {"context": itemgetter("content") | self.retriever,
              "role": itemgetter("role"),
-             "message": itemgetter("content"),
+             "content": itemgetter("content")
              }
             | RunnablePassthrough.assign(
                 history=RunnableLambda(self.history.load_messages) | itemgetter("history")
