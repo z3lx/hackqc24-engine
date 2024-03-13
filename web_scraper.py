@@ -1,6 +1,5 @@
 from bs4 import BeautifulSoup
 import requests
-import json
 import time
 from data_utils import save_txt
 import link_getter
@@ -37,63 +36,76 @@ def error_wrapper(func, url, **kwargs):
         print(f"Error occurred while running {func.__name__}")
         print("Error:", e)
         return None
+    
+def get_metadata(soup: BeautifulSoup) -> dict:
+    """
+    Extracts metadata from a webpage.
 
-def scrape_montreal(url: str, path: str) -> str:
+    Args:
+        soup (BeautifulSoup): a BeautifulSoup object
+
+    Returns:
+        dict: metadata extracted from the webpage
+    """
+    #Extract the metas from the page
+    metas = soup.find_all('meta') 
+    metadata = {}
+    for meta in metas:
+        if meta.get("property") and meta.get("content"):
+            metadata[meta.get("property")] = meta.get("content")
+        if meta.get("name") and meta.get("content"):
+            metadata[meta.get("name")] = meta.get("content")
+    return metadata
+
+def scrape_montreal(url: str, path: str, save_file: bool = True) -> str:
     """
     Scrapes article content from montreal.ca
     
     Args:
         url (str): url of the montreal.ca article
+        path (str): path to save the file
+        save_file (bool): if True, saves the content to a file. Defaults to True.
         
-    Returns
+    Returns:
         str: Article content of the page.
     """
-    def func(response, path):
-        soup = BeautifulSoup(response.text, 'html.parser') # Parse the HTML content
-        divs = soup.find_all('div', class_='content-modules') #Get all the divs with the class 'content-modules'
-        content = "".join([div.get_text() for div in divs]) #Extract text from each <div>
-        metas = soup.find_all('meta') #Extract the metas from the page
-        
-        #Extract the metadata from the meta tags
-        metadata = {}
-        for meta in metas:
-            if meta.get("property") and meta.get("content"):
-                metadata[meta.get("property")] = meta.get("content")
-            if meta.get("name") and meta.get("content"):
-                metadata[meta.get("name")] = meta.get("content")
-                
-        save_txt(content, json.dumps(metadata), path)
-        return content
-    return error_wrapper(func, url, path=path)
-    
-    
+    def func(response, path, save_file):
+        soup = BeautifulSoup(response.text, 'html.parser') 
+        divs = soup.find_all('div', class_='content-modules') 
+        content = "".join([div.get_text() for div in divs])        
+        metadata = get_metadata(soup) #
 
-def scrape_quebec(url: str, path: str):
+        if save_file: 
+            metadata = get_metadata(soup)
+            save_txt(content, metadata, path)
+        return content
+    
+    return error_wrapper(func, url, path=path, save_file=save_file)
+
+def scrape_quebec(url: str, path: str, save_file: bool = True) -> str:
     """
     Scrapes article content from quebec.ca
 
     Args:
         url (str): url of the quebec.ca article
         path (str): path to save the file
+        save_file (bool): if True, saves the content to a file. Defaults to True.
+        
+    Returns:
+        str: Article content of the page.
     """
     
-    def func(response, path):
-        soup = BeautifulSoup(response.text, 'html.parser') # Parse the HTML content
-        divs = soup.find_all('div', class_='ce-bodytext') #Get all the divs with the class 'ce-bodytext'  
-        content = "".join([div.get_text() for div in divs]) #Extract text from each <div> 
-        metas = soup.find_all('meta') #Extract the metas from the page
+    def func(response, path, save_file):
+        soup = BeautifulSoup(response.text, 'html.parser')
+        divs = soup.find_all('div', class_='ce-bodytext')
+        content = "\n".join([div.get_text() for div in divs])
         
-        metadata = {}
-        for meta in metas:
-            if meta.get("property") and meta.get("content"):
-                metadata[meta.get("property")] = meta.get("content")
-            if meta.get("name") and meta.get("content"):
-                metadata[meta.get("name")] = meta.get("content")
-                
-        save_txt(content, json.dumps(metadata), path)
+        if save_file: 
+            metadata = get_metadata(soup)
+            save_txt(content, metadata, path)
         return content
     
-    return error_wrapper(func, url, path=path)
+    return error_wrapper(func, url, path=path, save_file=save_file)
     
 def scrape_quebec_article_page():
     """
