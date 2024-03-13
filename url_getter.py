@@ -54,9 +54,7 @@ for div in divs:
             href = link.get("href")
             text = link.get_text()
             if href:
-                if href.startswith("http"):
-                    data[category][subcategory].append({"text": text, "url": href})
-                else:
+                if not href.startswith("http"):
                     data[category][subcategory].append({"text": text, "url": base_url + href})
 
 # Specify the encoding when writing the JSON file
