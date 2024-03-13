@@ -1,6 +1,7 @@
 from bs4 import BeautifulSoup
 import requests
 import json
+import url_getter
 
 def error_wrapper(func, url, **kwargs):
     """
@@ -153,6 +154,49 @@ def scrape_quebecs(urls: list[str]):
         else:
             print("Failed to scrape content")
         i += 1
+        
+def quebec_sub_url_getter(url:str):
+    """
+    Gets all the links of a subpage of quebec.ca
+    
+    Args:
+        url (str): link to the subpage containing links.
+    """
+    links = []
+    content = requests.get(url).text
+    page = BeautifulSoup(content, "html.parser")
+    links_html = page.find_all("a", class_="sous-theme-page-lien")
+    for link in links_html:
+        links.append(f"https://www.quebec.ca{link.get("href")}")
+    return links
+    
+    
+def scrape_quebec_article_page():
+    """
+    Goes through every link in quebec.ca and keeps opening links until it finds an article to scrape.
+    """
+    
+    links = []
+    index = 0
+    with open("data.json", "r", encoding="utf-8") as f:
+        documents = json.load(fp=f)
+    for section in documents.values():
+        for subsection in section.values():
+            for information in subsection:
+                links.append(information["url"])
+                
+    for link in links:
+        content = requests.get(link).text
+        page = BeautifulSoup(content, "html.parser")
+        if len(page.find_all("a", class_ = "sous-theme-tous section-link")) == 0:
+            scrape_quebec(link, f"chunks/independent_document{index}.txt")
+            print(f"Scraping {link}")
+            index+=1
+        else:
+            links.append(quebec_sub_url_getter(link))
+
      
-links = extract_links("https://www.quebec.ca/plan-du-site", "https://www.quebec.ca/")   
-scrape_quebecs(links[:5])
+
+if __name__ == "__main__":
+    links = extract_links("https://www.quebec.ca/plan-du-site", "https://www.quebec.ca/")   
+    scrape_quebecs(links[:5])
