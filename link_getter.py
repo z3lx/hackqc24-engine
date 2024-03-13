@@ -1,9 +1,55 @@
 from bs4 import BeautifulSoup
-import requests
 from data_utils import save_json, save_csv
+import validators
+from error import error_wrapper
+
+def get_sub_links(url: str, base_url: str, func: callable, verbose: bool = False, save_format: str = None) -> list[str]:
+    """
+    General function to get all the links of a subpage of a website. It can also be used for the base page itself if url == base_url.
+    
+    Args:
+        _url (str): link to the subpage containing links.
+        base_url (str): base url of the website.
+        func (callable): function that accepts a soup object and returns a list of anchor tags.
+        
+    Returns:
+        list[str]: list of links
+    """
+
+    #action function to be passed to error_wrapper
+    def action(response) -> list[str]:
+        #Error handling
+        if not validators.url(url): raise ValueError("The url is not valid")
+        if not validators.url(base_url): raise ValueError("The base url is not valid")
+        if not url.startswith(base_url): raise ValueError("The url must be from the same domain as the base url")
 
 
-def get_quebec_sub_links(url: str) -> list[str]:
+        links = []
+        content = response.text
+        page = BeautifulSoup(content, "html.parser")
+        anchor_tags = func(page)
+
+        for a in anchor_tags:
+            #only add the link if it's not already in the list and if it's not from a different domain
+            condition: bool = base_url + a.get("href") not in links and a.get("href").startswith("/")
+            if verbose:
+                if condition: links.append({"text": a.get_text(), "url": base_url + a.get("href")})
+            else:
+                if condition: links.append(base_url + a.get("href"))
+                    
+        if save_format == "json":
+            save_json(links, "base-links")
+        elif save_format == "csv":
+            save_csv(links, "base-links")
+        elif save_format != None:
+            print(f"Save format {save_format} is not supported")    
+                    
+        return links
+    
+    return error_wrapper(url, action)
+    
+
+def get_quebec_sub_links(url: str, verbose: bool = False, save_format: str = None) -> list:
     """
     Gets all the links of a subpage of quebec.ca
     
@@ -13,23 +59,34 @@ def get_quebec_sub_links(url: str) -> list[str]:
     Returns:
         list[str]: list of links
     """
-    links = []
-    content = requests.get(url).text
-    page = BeautifulSoup(content, "html.parser")
-    links_html = page.find_all("a", class_="sous-theme-page-lien")
-    for link in links_html:
-        #only add the link if it's not already in the list and if it's not from a different domain
-        if link.get("href") not in links and link.get("href").startswith("/"):
-            links.append(f"https://www.quebec.ca{link.get("href")}")
-    return links
 
-def get_base_links(url: str = "https://www.quebec.ca/plan-du-site", 
-                       base_url: str = "https://www.quebec.ca/", 
-                       verbose: bool = False,
-                       save_format: str = None
-                       ) -> list:
+    #get all the anchor tags with the class "sous-theme-page-lien"    
+    def func(page: BeautifulSoup) -> list:
+        return page.find_all("a", class_="sous-theme-page-lien")
+    
+    return get_sub_links(url, "https://www.quebec.ca/", func, verbose, save_format)
+
+def get_montreal_sub_links(url: str, verbose: bool = False, save_format: str = None) -> list:
     """
-    Extract all the useful links from the base level of a website. These links are all inside div class 'col-12 col-md-4' inside 'li' tags.
+    Gets all the links of a subpage of montreal.ca
+    
+    Args:
+        url (str): link to the subpage containing links.
+        
+    Returns:
+        list[str]: list of links
+    """
+        
+    def func(page: BeautifulSoup) -> list:
+        divs = page.find_all("div", class_="list-item-action")
+        anchor_tags = [div.find("a") for div in divs]
+        return anchor_tags
+    
+    return get_sub_links(url, "https://montreal.ca/", func, verbose, save_format)
+
+def get_quebec_base_links(verbose: bool = False, save_format: str = None) -> list:
+    """
+    Extract all the links from the base level of quebec website
 
     Args:
         url (str, optional): The url to scrape. Defaults to "https://www.quebec.ca/plan-du-site".
@@ -41,48 +98,14 @@ def get_base_links(url: str = "https://www.quebec.ca/plan-du-site",
         list: list of links
     """
     
-    response = requests.get(url)
-    if response.status_code != 200:
-        print(f"Failed to retrieve {url}, Status code: {response.status_code}")
-        return None
-    html_content = response.text
-    soup = BeautifulSoup(html_content, 'html.parser')
-    formatted_links = []
-    
-    links_html = soup.find_all("div", class_ = "col-12 col-md-4")
-    for link_html in links_html:
-        
-        #find all 'a' tags within each 'li' tag
-        lis = link_html.find_all('li')
-        
-        links = []
+    def func(page: BeautifulSoup) -> list:
+        anchor_tags = [];
+        lis = page.find_all('li')
         for li in lis:
-            links.extend(li.find_all('a'))
-        
-        
-        for link in links:
-            href = link.get('href')
-            if href:
-                if verbose:
-                    text = link.get_text()  
-                    # if href.startswith("http"): formatted_links.append({"text": text, "url": href})
-                    
-                    #only add the link if it's not already in the list and if it's not from a different domain
-                    if href.startswith("/") and not {"text": text, "url": base_url + href} in formatted_links:
-                        formatted_links.append({"text": text, "url": base_url + href})
-                else:
-                    # if href.startswith("http"): formatted_links.append(href)
-                    if href.startswith("/") and not base_url + href in formatted_links:
-                        formatted_links.append(base_url + href)
-                
-    if save_format == "json":
-        save_json(formatted_links, "base-links")
-    elif save_format == "csv":
-        save_csv(formatted_links, "base-links")
-    elif save_format != None:
-        print(f"Save format {save_format} is not supported")            
-    
-    return formatted_links
+            anchor_tags.extend(li.find_all('a'))
+        return anchor_tags
+            
+    return get_sub_links("https://www.quebec.ca/plan-du-site", "https://www.quebec.ca/", func, verbose, save_format)
         
 if __name__ == "__main__":
-    get_base_links(save_format="json")
+    get_quebec_base_links(save_format="json")
