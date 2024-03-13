@@ -1,7 +1,7 @@
 import csv
 from langchain.schema.document import Document
-import json
 import web_scraper
+from data_utils import save_txt
 
 def parse_dataset(dataset_path:str) -> list[list[str]]:
     """
@@ -63,7 +63,7 @@ def create_documents(dataset: list[list[str]], format:dict, index_of_description
     documents = []
     
     for index, row in enumerate(dataset): 
-        metadata = create_metadata(row=row, format=format)
+        metadata = create_metadata(row, format)
         page_content = row[index_of_description]
         if format["url"] is not None:
             index_of_url = format["url"]
@@ -71,11 +71,8 @@ def create_documents(dataset: list[list[str]], format:dict, index_of_description
             page_content += web_scraper.scrape_montreal(url)
         
         if save_as_file:
-            with open(f"chunks/document{index}.txt", "w", encoding="utf-8") as f1:
-                with open(f"chunks/document{index}.meta", "w", encoding="utf-8") as f2:
-                    f1.write(page_content)
-                    json.dump(metadata, f2, ensure_ascii=False)
-                    print(f"Document {index+1}/{len(dataset)} created       {round(((index+1)/len(dataset) * 100), 2)}% Done")
+            save_txt(page_content, metadata, f"chunks/document{index}")
+            print(f"Document {index+1}/{len(dataset)} created       {round(((index+1)/len(dataset) * 100), 2)}% Done")
                     
         if save_as_list:
             document = Document(page_content=page_content)
