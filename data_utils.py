@@ -32,16 +32,16 @@ def save_csv(data: dict, path: str):
             writer.writerow([key, value])
     print(f"Saved to {path}.csv")
     
-def save_txt(content: str, metadata: str, path: str = "./"):
+def save_txt(content: str, metadata: dict, path: str = "./"):
     """
     Saves string content to a txt file and metadata to a meta file.
 
     Args:
         content (str): content of the article
-        metadata (str): metadata of the article
+        metadata (dict): metadata of the article
         path (str): path to save the file
     """
     with open(f"{path}.txt", 'w', encoding='utf-8') as file:
         file.write(content)
     with open(f"{path}.meta", 'w', encoding='utf-8') as file:
-        file.write(json.dumps(metadata, ensure_ascii=False))
+        json.dump(metadata, file, ensure_ascii=False)
