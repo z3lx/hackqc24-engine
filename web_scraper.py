@@ -18,7 +18,7 @@ def error_wrapper(func, url, **kwargs):
         Any: returns the value returned by the function or None if an error occurs
     """
     retries = 5
-    retry_time = 5
+    retry_time = 60
     try:
         response = requests.get(url)
         if response.status_code == 200:
