@@ -159,5 +159,25 @@ def scrape_quebec_article_page():
             print(f"Opening {link}")
         print(f"{len(links)}\n")
 
+def write_quebec_links():
+    links = link_getter.get_base_links()
+    if (links == None):
+        print("Failed to retrieve links")
+        return None
+    
+    for link in links:
+        with open("all_quebec_urls.txt", "a", encoding="utf-8") as f:
+            f.write(f"{link}\n")
+        content = requests.get(link).text
+        page = BeautifulSoup(content, "html.parser")
+        if len(page.find_all("a", class_ = "sous-theme-tous section-link")) != 0:
+            # Add all the relevant sub-links if the page is not an article
+            sub_links = link_getter.get_quebec_sub_links(link)
+            links.extend(sub_links)
+            print(f"Opening {link}")
+        else:
+            print("This is an article, no more links to add.")
+    
+    print(f"{len(links)} links in total.")
 if __name__ == "__main__":
-    scrape_quebec_article_page()
+    write_quebec_links()
