@@ -4,6 +4,7 @@ import json
 from url_getter import extract_base_links
 import time
 from data_utils import save_txt
+import url_getter
 
 def error_wrapper(func, url, **kwargs):
     """
@@ -108,24 +109,6 @@ def scrape_quebec(url: str, path: str):
         return content
     
     return error_wrapper(func, url, path=path)
-        
-def quebec_sub_url_getter(url:str):
-    """
-    Gets all the links of a subpage of quebec.ca
-    
-    Args:
-        url (str): link to the subpage containing links.
-    """
-    links = []
-    content = requests.get(url).text
-    page = BeautifulSoup(content, "html.parser")
-    links_html = page.find_all("a", class_="sous-theme-page-lien")
-    for link in links_html:
-        #only add the link if it's not already in the list and if it's not from a different domain
-        if link.get("href") not in links and link.get("href").startswith("/"):
-            links.append(f"https://www.quebec.ca{link.get("href")}")
-    return links
-    
     
 def scrape_quebec_article_page():
     """
@@ -143,7 +126,8 @@ def scrape_quebec_article_page():
             print(f"Scraping {link}")
             index+=1
         else:
-            links.append(quebec_sub_url_getter(link))
+            # Add all the relevant sub-links if the page is not an article
+            links.append(url_getter.quebec_sub_url_getter(link))
 
 if __name__ == "__main__":
     scrape_quebec_article_page()
