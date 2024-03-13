@@ -19,6 +19,7 @@ keeping a hierarchical structure of the links with categories and subcategories.
 
 # The URL of the website to scrape
 url = "https://www.quebec.ca/plan-du-site"
+base_url = "https://www.quebec.ca"
 content = requests.get(url).text.encode("utf-8")
 document = BeautifulSoup(content, "html.parser")
 
@@ -56,7 +57,7 @@ for div in divs:
                 if href.startswith("http"):
                     data[category][subcategory].append({"text": text, "url": href})
                 else:
-                    data[category][subcategory].append({"text": text, "url": url + href})
+                    data[category][subcategory].append({"text": text, "url": base_url + href})
 
 # Specify the encoding when writing the JSON file
 with open("data.json", "w", encoding="utf-8") as file:
