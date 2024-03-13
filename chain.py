@@ -26,15 +26,16 @@ class ChatBot:
         )
         self.prompt = ChatPromptTemplate.from_messages([
             MessagesPlaceholder(variable_name="history"),
-            #("system", "Answer the user with the following context:\n{context}\n\n"
-            #           "If the answer is not within the context or the history, "
-            #           "do not invent new information and let the user know."),
-            ("user", "{message}")
+            ("system", "Answer {role} (user) with the following context:\n{context}\n\n"
+                       "If the answer is not within the context or the history, "
+                       "do not invent new information and let {role} (user) know."),
+            ("user", "{role}: {message}")
         ])
 
         self.main = (
             {"context": self.retriever,
-             "message": RunnablePassthrough(),
+             "role": itemgetter("role"),
+             "message": itemgetter("content"),
              }
             | RunnablePassthrough.assign(
                 history=RunnableLambda(self.history.load_messages) | itemgetter("history")
@@ -44,7 +45,7 @@ class ChatBot:
         )
 
         self.add_human_message = (
-            itemgetter("content")
+            {"role": itemgetter("role"), "content": itemgetter("content")}
             | RunnableLambda(self._add_human_message)
         )
 
@@ -53,8 +54,10 @@ class ChatBot:
             | RunnableLambda(self._add_ai_message)
         )
 
-    def _add_human_message(self, content: str) -> str:
-        self.history.add_human_message(content=content)
+    def _add_human_message(self, _dict: Dict[str, str]) -> str:
+        role = _dict["role"]
+        content = _dict["content"]
+        self.history.add_human_message(content=f"{role}: {content}")
         return ""
 
     def _add_ai_message(self, content: str) -> str:
