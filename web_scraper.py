@@ -57,7 +57,7 @@ def error_wrapper(url: str, func: callable,**kwargs):
         Any | None: returns the value returned by the function or None if an error occurs
     """
     retries = 5
-    retry_time = 60
+    retry_time = 120
     try:
         response = requests.get(url)
         if response.status_code == 200:
@@ -71,7 +71,7 @@ def error_wrapper(url: str, func: callable,**kwargs):
                 response = requests.get(url)
                 if response.status_code == 200:
                     return response_wrapper(response, func, **kwargs)
-        print(f"Couldn't retrieve {url}") 
+                print(f"Failed to retrieve {url}. Status code:", response.status_code)
         return None
     except Exception as e:
         print(f"Error occurred while running {func.__name__}")
@@ -141,6 +141,9 @@ def scrape_quebec_article_page():
     
     i = 0
     links = link_getter.get_base_links()
+    if (links == None):
+        print("Failed to retrieve links")
+        return None
     
     for link in links:
         content = requests.get(link).text
@@ -151,7 +154,10 @@ def scrape_quebec_article_page():
             i += 1
         else:
             # Add all the relevant sub-links if the page is not an article
-            links.append(link_getter.get_quebec_sub_links(link))
+            sub_links = link_getter.get_quebec_sub_links(link)
+            links.extend(sub_links)
+            print(f"Opening {link}")
+        print(f"{len(links)}\n")
 
 if __name__ == "__main__":
     scrape_quebec_article_page()

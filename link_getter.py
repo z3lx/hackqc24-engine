@@ -29,7 +29,7 @@ def get_base_links(url: str = "https://www.quebec.ca/plan-du-site",
                        save_format: str = None
                        ) -> list:
     """
-    Extract all the links from the base level of a website. These links are all inside 'li' tags.
+    Extract all the useful links from the base level of a website. These links are all inside div class 'col-12 col-md-4' inside 'li' tags.
 
     Args:
         url (str, optional): The url to scrape. Defaults to "https://www.quebec.ca/plan-du-site".
@@ -42,32 +42,38 @@ def get_base_links(url: str = "https://www.quebec.ca/plan-du-site",
     """
     
     response = requests.get(url)
+    if response.status_code != 200:
+        print(f"Failed to retrieve {url}, Status code: {response.status_code}")
+        return None
     html_content = response.text
     soup = BeautifulSoup(html_content, 'html.parser')
-    
-    #find all 'a' tags within each 'li' tag
-    lis = soup.find_all('li')
-    
-    links = []
-    for li in lis:
-        links.extend(li.find_all('a'))
-    
-    
     formatted_links = []
-    for link in links:
-        href = link.get('href')
-        if href:
-            if verbose:
-                text = link.get_text()  
-                # if href.startswith("http"): formatted_links.append({"text": text, "url": href})
-                
-                #only add the link if it's not already in the list and if it's not from a different domain
-                if href.startswith("/") and not {"text": text, "url": base_url + href} in formatted_links:
-                    formatted_links.append({"text": text, "url": base_url + href})
-            else:
-                # if href.startswith("http"): formatted_links.append(href)
-                if href.startswith("/") and not base_url + href in formatted_links:
-                    formatted_links.append(base_url + href)
+    
+    links_html = soup.find_all("div", class_ = "col-12 col-md-4")
+    for link_html in links_html:
+        
+        #find all 'a' tags within each 'li' tag
+        lis = link_html.find_all('li')
+        
+        links = []
+        for li in lis:
+            links.extend(li.find_all('a'))
+        
+        
+        for link in links:
+            href = link.get('href')
+            if href:
+                if verbose:
+                    text = link.get_text()  
+                    # if href.startswith("http"): formatted_links.append({"text": text, "url": href})
+                    
+                    #only add the link if it's not already in the list and if it's not from a different domain
+                    if href.startswith("/") and not {"text": text, "url": base_url + href} in formatted_links:
+                        formatted_links.append({"text": text, "url": base_url + href})
+                else:
+                    # if href.startswith("http"): formatted_links.append(href)
+                    if href.startswith("/") and not base_url + href in formatted_links:
+                        formatted_links.append(base_url + href)
                 
     if save_format == "json":
         save_json(formatted_links, "base-links")
