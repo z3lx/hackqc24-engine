@@ -1,8 +1,9 @@
 from bs4 import BeautifulSoup
 import requests
 import json
-import url_getter
+from url_getter import extract_base_links
 import time
+from data_utils import save_txt
 
 def error_wrapper(func, url, **kwargs):
     """
@@ -68,52 +69,11 @@ def scrape_montreal(url: str, path: str) -> str:
             if meta.get("name") and meta.get("content"):
                 metadata[meta.get("name")] = meta.get("content")
                 
-        save_to_file(content, json.dumps(metadata), path)
+        save_txt(content, json.dumps(metadata), path)
         return content
     return error_wrapper(func, url, path=path)
     
     
-def extract_links(url: str, base_url: str, verbose: bool = False) -> list:
-        """
-        Extract links from all the urls without using ai.
-
-        Args:
-            verbose (bool, optional): If True, returns a list of dictionaries with the url and the links. Defaults to False.
-
-        Returns:
-            list: list of links
-        """
-        
-        response = requests.get(url)
-        html_content = response.text
-        soup = BeautifulSoup(html_content, 'html.parser')
-        links = soup.find_all("a")
-        formatted_links = []
-        for link in links:
-            href = link.get('href')
-            if href:
-                if verbose:
-                    text = link.get_text()  
-                    if href.startswith("http"): formatted_links.append({"text": text, "url": href})
-                    else: formatted_links.append({"text": text, "url": base_url + href})
-                else:
-                    if href.startswith("http"): formatted_links.append(href)
-                    else: formatted_links.append(base_url + href)
-        return formatted_links
-    
-def save_to_file(content: str, metadata: str, path: str) -> None:
-    """
-    Saves the content and metadata to a file.
-
-    Args:
-        content (str): content of the article
-        metadata (str): metadata of the article
-        path (str): path to save the file
-    """
-    with open(f"{path}.txt", 'w', encoding='utf-8') as file:
-        file.write(content)
-    with open(f"{path}.meta", 'w', encoding='utf-8') as file:
-        file.write(metadata)
 
 def scrape_quebec(url: str, path: str):
     """
@@ -144,27 +104,10 @@ def scrape_quebec(url: str, path: str):
             if meta.get("name") and meta.get("content"):
                 metadata[meta.get("name")] = meta.get("content")
                 
-        save_to_file(content, json.dumps(metadata), path)
+        save_txt(content, json.dumps(metadata), path)
         return content
     
     return error_wrapper(func, url, path=path)
-
-
-def scrape_quebecs(urls: list[str]):
-    """
-    Scrapes the content of multiple quebec.ca articles and saves them to files.
-
-    Args:
-        urls (list[str]): list of urls to scrape
-    """
-    i = 1
-    for url in urls:
-        scraped_content = scrape_quebec(url, f"./chunks/scraped_content{i}.txt")
-        if scraped_content:
-            print("Scraped content:", scraped_content[:100])
-        else:
-            print("Failed to scrape content")
-        i += 1
         
 def quebec_sub_url_getter(url:str):
     """
@@ -178,7 +121,9 @@ def quebec_sub_url_getter(url:str):
     page = BeautifulSoup(content, "html.parser")
     links_html = page.find_all("a", class_="sous-theme-page-lien")
     for link in links_html:
-        links.append(f"https://www.quebec.ca{link.get("href")}")
+        #only add the link if it's not already in the list and if it's not from a different domain
+        if link.get("href") not in links and link.get("href").startswith("/"):
+            links.append(f"https://www.quebec.ca{link.get("href")}")
     return links
     
     
@@ -187,15 +132,9 @@ def scrape_quebec_article_page():
     Goes through every link in quebec.ca and keeps opening links until it finds an article to scrape.
     """
     
-    links = []
     index = 0
-    with open("data.json", "r", encoding="utf-8") as f:
-        documents = json.load(fp=f)
-    for section in documents.values():
-        for subsection in section.values():
-            for information in subsection:
-                links.append(information["url"])
-                
+    links = extract_base_links()
+    
     for link in links:
         content = requests.get(link).text
         page = BeautifulSoup(content, "html.parser")
@@ -206,9 +145,5 @@ def scrape_quebec_article_page():
         else:
             links.append(quebec_sub_url_getter(link))
 
-     
-
 if __name__ == "__main__":
     scrape_quebec_article_page()
-    links = extract_links("https://www.quebec.ca/plan-du-site", "https://www.quebec.ca/")   
-    scrape_quebecs(links[:5])
