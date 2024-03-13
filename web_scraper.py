@@ -1,8 +1,10 @@
-from bs4 import BeautifulSoup
 import requests
-from data_utils import save_txt
 import link_getter
+import validators
 from error import error_wrapper
+from data_utils import save_txt
+from bs4 import BeautifulSoup
+import os
 
 def get_metadata(soup: BeautifulSoup) -> dict:
     """
@@ -58,6 +60,13 @@ def scrape(url: str, func: callable, path: str, save_file: bool = True) -> str:
     Returns:
         str: Article content of the page.
     """
+    
+    #Error handling
+    if not validators.url(url): raise ValueError("The url is not valid")
+    if not os.path.exists(path) and save_file:
+        print(f"Path {path} does not exist. Creating it...")
+        os.makedirs(path)
+        
     return error_wrapper(url, response_wrapper, retry_time=60, func=func, path=path, save_file=save_file)
 
 def scrape_montreal(url: str, path: str, save_file: bool = True) -> str:
