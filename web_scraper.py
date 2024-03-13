@@ -54,7 +54,7 @@ def error_wrapper(url: str, func: callable,**kwargs):
         url (str): url of the webpage
 
     Returns:
-        Any: returns the value returned by the function or None if an error occurs
+        Any | None: returns the value returned by the function or None if an error occurs
     """
     retries = 5
     retry_time = 60
@@ -128,7 +128,7 @@ def scrape_quebec(url: str, path: str, save_file: bool = True) -> str:
     
     # Specific function to extract content from quebec.ca
     def func(soup: BeautifulSoup) -> str:
-        divs = soup.find_all('div', class_='field--name-field-contenu')
+        divs = soup.find_all('div', class_='ce-bodytext')
         content = "\n".join([div.get_text() for div in divs])
         return content
     
