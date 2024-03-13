@@ -1,53 +1,47 @@
-import pandas as pd
+import csv
 import json
 
 """
 Utility functions for saving data to different formats
 """
     
-def save_json(data: dict, filename: str , dir: str = ""):
+def save_json(data: dict, path: str ):
     """
     Save data to a json file with utf-8 encoding.
 
     Args:
         data (dict): dictionary to save
         filename (str): name of the file. Do not include the extension
-        dir (str, optional): directory to save the file. Defaults to "".
+        path (str, optional): path to save the file. Example: ./links. Do not include the extension
     """
-    with open(f"{dir}{filename}.json", "w", encoding="utf-8") as file:
-        json.dump(data, file, indent=2)
-    print(f"Saved to {dir}{filename}.json")
+    with open(f"{path}.json", "w", encoding="utf-8") as file:
+        json.dump(data, file, indent=2, ensure_ascii=False)
+    print(f"Saved to {path}.json")
 
-#@TODO: Add support for csv. The function below is broken
-def save_csv(self, data: dict, filename: str, dir: str = ""):
-    df = pd.DataFrame(data)
-    df.to_csv(f"{dir}{filename}.csv", index=False, encoding="utf-8")
-    print(f"Saved to {dir}{filename}.csv")
+def save_csv(data: dict, path: str):
+    """
+    Save data to a csv file with utf-8 encoding.
+
+    Args:
+        data (dict): dictionary to save
+        path (str, optional): path to save the file. Example: ./links. Do not include the extension
+    """
+    with open(f"{path}.csv", "w", encoding="utf-8") as file:
+        writer = csv.writer(file)
+        for key, value in data.items():
+            writer.writerow([key, value])
+    print(f"Saved to {path}.csv")
     
-def load_json(filename: str, dir: str = "") -> dict:
+def save_txt(content: str, metadata: str, path: str = "./"):
     """
-    Load a json file
+    Saves string content to a txt file and metadata to a meta file.
 
     Args:
-        filename (str): name of the file
-        dir (str, optional): directory of the file. Defaults to "".
-
-    Returns:
-        dict: loaded data
+        content (str): content of the article
+        metadata (str): metadata of the article
+        path (str): path to save the file
     """
-    with open(f"{dir}{filename}.json", "r", encoding="utf-8") as file:
-        data = json.load(file)
-    return data
-
-def load_csv(filename: str, dir: str = "") -> pd.DataFrame:
-    """
-    Load a csv file
-
-    Args:
-        filename (str): name of the file
-        dir (str, optional): directory of the file. Defaults to "".
-
-    Returns:
-        pd.DataFrame: loaded data
-    """
-    return pd.read_csv(f"{dir}{filename}.csv", encoding="utf-8")
+    with open(f"{path}.txt", 'w', encoding='utf-8') as file:
+        file.write(content)
+    with open(f"{path}.meta", 'w', encoding='utf-8') as file:
+        file.write(json.dumps(metadata, ensure_ascii=False))
