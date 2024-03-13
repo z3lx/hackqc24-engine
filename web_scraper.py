@@ -1,10 +1,9 @@
 from bs4 import BeautifulSoup
 import requests
 import json
-from url_getter import extract_base_links
 import time
 from data_utils import save_txt
-import url_getter
+import link_getter
 
 def error_wrapper(func, url, **kwargs):
     """
@@ -50,17 +49,10 @@ def scrape_montreal(url: str, path: str) -> str:
         str: Article content of the page.
     """
     def func(response, path):
-        # Parse the HTML content
-        soup = BeautifulSoup(response.text, 'html.parser')
-        
-        # Extract text from all <div> elements with class "content-modules"
-        divs = soup.find_all('div', class_='content-modules')
-        
-        # Extract text from each <div> and join with ". "
-        content = "".join([div.get_text() for div in divs])
-        
-        #Extract the metas from the page
-        metas = soup.find_all('meta')
+        soup = BeautifulSoup(response.text, 'html.parser') # Parse the HTML content
+        divs = soup.find_all('div', class_='content-modules') #Get all the divs with the class 'content-modules'
+        content = "".join([div.get_text() for div in divs]) #Extract text from each <div>
+        metas = soup.find_all('meta') #Extract the metas from the page
         
         #Extract the metadata from the meta tags
         metadata = {}
@@ -86,17 +78,10 @@ def scrape_quebec(url: str, path: str):
     """
     
     def func(response, path):
-        # Parse the HTML content
-        soup = BeautifulSoup(response.text, 'html.parser')
-        
-        # Extract text from all <div> elements with class "ce-bodytext"
-        divs = soup.find_all('div', class_='ce-bodytext')
-        
-        #Extract the metas from the page
-        metas = soup.find_all('meta')
-        
-        # Extract text from each <div> and join with ". "
-        content = "".join([div.get_text() for div in divs])
+        soup = BeautifulSoup(response.text, 'html.parser') # Parse the HTML content
+        divs = soup.find_all('div', class_='ce-bodytext') #Get all the divs with the class 'ce-bodytext'  
+        content = "".join([div.get_text() for div in divs]) #Extract text from each <div> 
+        metas = soup.find_all('meta') #Extract the metas from the page
         
         metadata = {}
         for meta in metas:
@@ -115,19 +100,19 @@ def scrape_quebec_article_page():
     Goes through every link in quebec.ca and keeps opening links until it finds an article to scrape.
     """
     
-    index = 0
-    links = extract_base_links()
+    i = 0
+    links = link_getter.get_base_links()
     
     for link in links:
         content = requests.get(link).text
         page = BeautifulSoup(content, "html.parser")
         if len(page.find_all("a", class_ = "sous-theme-tous section-link")) == 0:
-            scrape_quebec(link, f"chunks/independent_document{index}")
+            scrape_quebec(link, f"chunks/independent_document{i}")
             print(f"Scraping {link}")
-            index+=1
+            i += 1
         else:
             # Add all the relevant sub-links if the page is not an article
-            links.append(url_getter.quebec_sub_url_getter(link))
+            links.append(link_getter.get_quebec_sub_links(link))
 
 if __name__ == "__main__":
     scrape_quebec_article_page()

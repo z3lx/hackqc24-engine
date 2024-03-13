@@ -1,15 +1,17 @@
 from bs4 import BeautifulSoup
 import requests
-import json
 from data_utils import save_json, save_csv
 
 
-def quebec_sub_url_getter(url:str):
+def get_quebec_sub_links(url: str) -> list[str]:
     """
     Gets all the links of a subpage of quebec.ca
     
     Args:
         url (str): link to the subpage containing links.
+        
+    Returns:
+        list[str]: list of links
     """
     links = []
     content = requests.get(url).text
@@ -21,7 +23,7 @@ def quebec_sub_url_getter(url:str):
             links.append(f"https://www.quebec.ca{link.get("href")}")
     return links
 
-def extract_base_links(url: str = "https://www.quebec.ca/plan-du-site", 
+def get_base_links(url: str = "https://www.quebec.ca/plan-du-site", 
                        base_url: str = "https://www.quebec.ca/", 
                        verbose: bool = False,
                        save_format: str = None
@@ -77,4 +79,4 @@ def extract_base_links(url: str = "https://www.quebec.ca/plan-du-site",
     return formatted_links
         
 if __name__ == "__main__":
-    extract_base_links(save_format="json")
+    get_base_links(save_format="json")
