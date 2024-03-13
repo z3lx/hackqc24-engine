@@ -1,15 +1,8 @@
-from langchain_community.document_loaders import AsyncChromiumLoader
-from langchain_community.document_transformers import BeautifulSoupTransformer
-from langchain_core.documents import Document
-from langchain_openai import ChatOpenAI
-from langchain.chains import create_extraction_chain
-from langchain_text_splitters import RecursiveCharacterTextSplitter
-from data_utils import save_json, save_csv
 from bs4 import BeautifulSoup
 import requests
 import json
 
-def error_wrapper(func, url: str):
+def error_wrapper(func, url, **kwargs):
     """
     Wrapper function to handle errors related to requests while running the function.
 
@@ -23,7 +16,7 @@ def error_wrapper(func, url: str):
     try:
         response = requests.get(url)
         if response.status_code == 200:
-            return func(response)
+            return func(response, **kwargs)
         else:
             print("Failed to retrieve the webpage. Status code:", response.status_code)
             return None
@@ -32,8 +25,7 @@ def error_wrapper(func, url: str):
         print("Error:", e)
         return None
 
-def scrape_montreal(url: str) -> str:
-        
+def scrape_montreal(url: str, path: str) -> str:
     """
     Scrapes article content from montreal.ca
     
@@ -43,18 +35,30 @@ def scrape_montreal(url: str) -> str:
     Returns
         str: Article content of the page.
     """
-    def func(response):
+    def func(response, path):
         # Parse the HTML content
         soup = BeautifulSoup(response.text, 'html.parser')
         
         # Extract text from all <div> elements with class "content-modules"
-        div_contents = soup.find_all('div', class_='content-modules')
+        divs = soup.find_all('div', class_='content-modules')
         
         # Extract text from each <div> and join with ". "
-        extracted_text = ". ".join([div.get_text(separator='. ') for div in div_contents])
+        content = "".join([div.get_text() for div in divs])
         
-        return extracted_text
-    return error_wrapper(func, url)
+        #Extract the metas from the page
+        metas = soup.find_all('meta')
+        
+        #Extract the metadata from the meta tags
+        metadata = {}
+        for meta in metas:
+            if meta.get("property") and meta.get("content"):
+                metadata[meta.get("property")] = meta.get("content")
+            if meta.get("name") and meta.get("content"):
+                metadata[meta.get("name")] = meta.get("content")
+                
+        save_to_file(content, json.dumps(metadata), path)
+        return content
+    return error_wrapper(func, url, path=path)
     
     
 def extract_links(url: str, base_url: str, verbose: bool = False) -> list:
@@ -99,15 +103,16 @@ def save_to_file(content: str, metadata: str, path: str) -> None:
     with open(f"{path}.metadata", 'w', encoding='utf-8') as file:
         file.write(metadata)
 
-def scrape_quebec(url: str) -> None:
+def scrape_quebec(url: str, path: str):
     """
     Scrapes article content from quebec.ca
 
     Args:
         url (str): url of the quebec.ca article
+        path (str): path to save the file
     """
     
-    def func(response):
+    def func(response, path):
         # Parse the HTML content
         soup = BeautifulSoup(response.text, 'html.parser')
         
@@ -118,8 +123,7 @@ def scrape_quebec(url: str) -> None:
         metas = soup.find_all('meta')
         
         # Extract text from each <div> and join with ". "
-        content = ". ".join([div.get_text(separator='. ') for div in divs])
-        cleaned_content = content.replace("\n", " ").replace("\r", " ").replace("\t", " ")
+        content = "".join([div.get_text() for div in divs])
         
         metadata = {}
         for meta in metas:
@@ -128,14 +132,27 @@ def scrape_quebec(url: str) -> None:
             if meta.get("name") and meta.get("content"):
                 metadata[meta.get("name")] = meta.get("content")
                 
-        save_to_file(cleaned_content, json.dumps(metadata), f"./datasets/scraped_content{i}.txt")
+        save_to_file(content, json.dumps(metadata), path)
+        return content
     
-    return error_wrapper(func, url)
-
-links = extract_links("https://www.quebec.ca/plan-du-site", "https://www.quebec.ca/")
+    return error_wrapper(func, url, path=path)
 
 
-i = 1
-for link in links:
-    scraped_content = scrape_quebec(link)
-    i += 1
+def scrape_quebecs(urls: list[str]):
+    """
+    Scrapes the content of multiple quebec.ca articles and saves them to files.
+
+    Args:
+        urls (list[str]): list of urls to scrape
+    """
+    i = 1
+    for url in urls:
+        scraped_content = scrape_quebec(url, f"./datasets/scraped_content{i}.txt")
+        if scraped_content:
+            print("Scraped content:", scraped_content[:100])
+        else:
+            print("Failed to scrape content")
+        i += 1
+     
+links = extract_links("https://www.quebec.ca/plan-du-site", "https://www.quebec.ca/")   
+scrape_quebecs(links[:5])
