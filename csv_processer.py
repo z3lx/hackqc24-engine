@@ -82,4 +82,30 @@ def create_documents(dataset: list[list[str]], format:dict, index_of_description
     if save_as_file:
         return documents
     return None
-            
+
+def txt_to_csv(input_file: str, output_file: str):
+    """
+    Convert a text file to a CSV file.
+
+    Args:
+        input_file (str): Path to the input text file.
+        output_file (str): Path to the output CSV file.
+    """
+    # Open the input file for reading
+    lines: list[str]
+    with open(input_file, 'r', encoding="utf-8") as file:
+        lines = file.readlines()
+
+    # Process the lines and convert them to CSV format
+    csv_lines = []
+    for line in lines:
+        # Split the line into fields (assuming comma-separated values)
+        fields = line.strip().split(',')
+
+        # Add the fields to the CSV lines
+        csv_lines.append(','.join(fields))
+
+    # Open the output file for writing
+    with open(output_file, 'w', encoding="utf-8") as file:
+        # Write the CSV lines to the output file
+        file.write('\n'.join(csv_lines))
