@@ -1,53 +1,48 @@
-import os
 from operator import itemgetter
+from typing import Dict
 
 from langchain.memory import ConversationBufferMemory
-from langchain_community.vectorstores.chroma import Chroma
+import langchain_community.vectorstores as vectorstores
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.runnables import RunnablePassthrough, RunnableLambda
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 
-os.environ["LANGCHAIN_TRACING_V2"] = "true"
 
-model = ChatOpenAI(model="gpt-3.5-turbo-0125")
-embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
-memory = ConversationBufferMemory(return_messages=True)
-db = Chroma(
-    persist_directory="./chromadb",
-    embedding_function=embeddings
-)
-retriever = db.as_retriever(
-    search_type="mmr",
-    search_kwargs={
-        "k": 5,
-        "fetch_k": 50,
-        "lambda_mult": 0.25
-    }
-)
+class ChatBot:
+    def __init__(self, model_name: str, embeddings_model_name: str,
+                 db_type: str, db_path: str, search_type: str = "mmr", search_kwargs: Dict[str, any] = None) -> None:
+        self.model = ChatOpenAI(model=model_name)
+        self.embeddings = OpenAIEmbeddings(model=embeddings_model_name)
+        self.memory = ConversationBufferMemory(return_messages=True)
+        self.db = getattr(vectorstores, db_type)(
+            persist_directory=db_path,
+            embedding_function=self.embeddings
+        )
+        self.retriever = self.db.as_retriever(
+            search_type=search_type,
+            search_kwargs=search_kwargs
+        )
+        self.prompt = ChatPromptTemplate.from_messages([
+            MessagesPlaceholder(variable_name="history"),
+            ("system", "Answer the user with the following context:\n{context}\n\n"
+                       "If the answer is not within the context, do not invent new information and let the user know."),
+            ("user", "{message}")
+        ])
+        self.chain = (
+            {"context": self.retriever,
+             "message": RunnablePassthrough(),
+             }
+            | RunnablePassthrough.assign(
+                history=RunnableLambda(self.memory.load_memory_variables) | itemgetter("history")
+            )
+            | self.prompt
+            | self.model
+        )
 
-prompt = ChatPromptTemplate.from_messages([
-    MessagesPlaceholder(variable_name="history"),
-    ("system", "Answer the user with the following context:\n{context}\n\n"
-               "If the answer is not within the context, do not invent new information and let the user know."),
-    ("user", "{message}")
-])
-
-chain = (
-    {"context": retriever,
-     "message": RunnablePassthrough(),
-     }
-    | RunnablePassthrough.assign(
-        history=RunnableLambda(memory.load_memory_variables) | itemgetter("history")
-    )
-    | prompt
-    | model
-)
-
-while True:
-    message = input("")
-    response = chain.invoke(message)
-    memory.save_context(
-        inputs={"input": message},
-        outputs={"output": response.content}
-    )
-    print(response.content)
+    def get_response(self, message: str) -> str:
+        response = self.chain.invoke(message).content
+        self.memory.save_context(
+            inputs={"input": message},
+            outputs={"output": response}
+        )
+        return response
