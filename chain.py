@@ -16,8 +16,14 @@ db = Chroma(
     persist_directory="./chromadb",
     embedding_function=embeddings
 )
-retriever = db.as_retriever(search_kwargs={"k": 1})
-# docs = db.similarity_search(question)
+retriever = db.as_retriever(
+    search_type="mmr",
+    search_kwargs={
+        "k": 5,
+        "fetch_k": 50,
+        "lambda_mult": 0.25
+    }
+)
 
 prompt = ChatPromptTemplate.from_messages([
     MessagesPlaceholder(variable_name="history"),
