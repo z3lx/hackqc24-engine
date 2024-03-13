@@ -46,3 +46,6 @@ class ChatBot:
             outputs={"output": response}
         )
         return response
+
+    def get_chain(self):
+        return self.chain
