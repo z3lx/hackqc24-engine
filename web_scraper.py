@@ -2,6 +2,7 @@ from bs4 import BeautifulSoup
 import requests
 import json
 import url_getter
+import time
 
 def error_wrapper(func, url, **kwargs):
     """
@@ -14,13 +15,23 @@ def error_wrapper(func, url, **kwargs):
     Returns:
         Any: returns the value returned by the function or None if an error occurs
     """
+    retries = 5
+    retry_time = 5
     try:
         response = requests.get(url)
         if response.status_code == 200:
             return func(response, **kwargs)
         else:
-            print("Failed to retrieve the webpage. Status code:", response.status_code)
-            return None
+            print(f"Failed to retrieve {url}. Status code:", response.status_code)
+            for retry in range(retries):
+                print(f"Retrying in {retry_time} seconds...")
+                print(f"{retries - retry} retrie(s) left.")
+                time.sleep(retry_time)
+                response = requests.get(url)
+                if response.status_code == 200:
+                    return func(response, **kwargs)
+        print(f"Couldn't retrieve {url}") 
+        return None
     except Exception as e:
         print(f"Error occurred while running {func.__name__}")
         print("Error:", e)
@@ -99,9 +110,9 @@ def save_to_file(content: str, metadata: str, path: str) -> None:
         metadata (str): metadata of the article
         path (str): path to save the file
     """
-    with open(path, 'w', encoding='utf-8') as file:
+    with open(f"{path}.txt", 'w', encoding='utf-8') as file:
         file.write(content)
-    with open(f"{path}.metadata", 'w', encoding='utf-8') as file:
+    with open(f"{path}.meta", 'w', encoding='utf-8') as file:
         file.write(metadata)
 
 def scrape_quebec(url: str, path: str):
@@ -148,7 +159,7 @@ def scrape_quebecs(urls: list[str]):
     """
     i = 1
     for url in urls:
-        scraped_content = scrape_quebec(url, f"./datasets/scraped_content{i}.txt")
+        scraped_content = scrape_quebec(url, f"./chunks/scraped_content{i}.txt")
         if scraped_content:
             print("Scraped content:", scraped_content[:100])
         else:
@@ -189,7 +200,7 @@ def scrape_quebec_article_page():
         content = requests.get(link).text
         page = BeautifulSoup(content, "html.parser")
         if len(page.find_all("a", class_ = "sous-theme-tous section-link")) == 0:
-            scrape_quebec(link, f"chunks/independent_document{index}.txt")
+            scrape_quebec(link, f"chunks/independent_document{index}")
             print(f"Scraping {link}")
             index+=1
         else:
@@ -198,5 +209,6 @@ def scrape_quebec_article_page():
      
 
 if __name__ == "__main__":
+    scrape_quebec_article_page()
     links = extract_links("https://www.quebec.ca/plan-du-site", "https://www.quebec.ca/")   
     scrape_quebecs(links[:5])
