@@ -4,51 +4,51 @@ from langchain.docstore.document import Document
 import json
 import os
 
-def get_documents() -> list[Document]:
+
+def get_documents(path: str) -> list[Document]:
     """
-    Turns all unchunked Documents in "chunks" project directory into a list of Documents in memory.
-    
-    Returns
-        list[Document]: List of unchunked Documents, to have it in memory.
+    Reads all text and its associated metadata files from a given directory and returns a list of Document objects.
+
+    Args:
+        path (str): The path to the directory containing the text files.
+
+    Returns:
+        list[Document]: A list of Document objects representing the text files and its associated metadata.
+
+    Raises:
+        ValueError: If the provided path does not exist or if there is an error in reading the files.
     """
-    
-    documents = []
-    for index, file in enumerate(os.listdir("chunks")):
-        page_content = ""
-        metadeta = {}
-        file_extension = (file.split(sep="."))[-1]
-        current_file = f"chunks/{os.listdir("chunks")[index]}"
-        
-        if file_extension == "meta": 
-            next_file = f"chunks/{os.listdir("chunks")[index+1]}"
-            with open(current_file, "r", encoding="utf-8") as f:
-                json_string = f.read()
-                metadeta = json.loads(json_string)
-            with open(next_file, "r", encoding="utf-8") as f:
-                page_content = f.read()
-                document = Document(page_content=page_content)
-                document.metadata = metadeta
-                documents.append(document)
-            
-    return documents
-            
+    if not os.path.exists(path):
+        raise ValueError(f"Path {path} does not exist")
+    try:
+        docs = [
+            Document(
+                page_content=open(os.path.join(path, f), "r", encoding="utf-8").read(),
+                metadata=json.load(open(os.path.join(path, f"{f}.meta"), "r", encoding="utf-8"))
+            ) for f in os.listdir(path) if f.endswith(".txt")
+        ]
+    except Exception as e:
+        raise ValueError(f"Failed to load documents from {path}: {e}")
+    return docs
+
+
 def chunk(documents: list[Document], save_as_file:bool, save_as_list:bool) -> list[Document]:
     """
     Chunks a list of unchunked Documents into chunked Documents
-    
+
     Args:
         documents (list[Document]): List of unchunked Documents we want to chunk.
         save_as_file (boolean): Says if we want to write all the chunks as txt and json files, writes in "chunks" project directory.
         save_as_list (boolean): Says if we want to save all the chunks as a list of Documents in memory.
-        
+
     Returns:
         list[Document]: A list of Documents if save_as_list is true, returns Nothing otherwise.
     """
-    
+
     # Remove everything in "chunks" project folder
     for file in os.listdir("chunks"):
         os.remove(f"chunks/{file}")
-    
+
     text_splitter = TokenTextSplitter()
     text_splitter._chunk_size = 4096
     text_splitter._chunk_overlap = 20
@@ -62,8 +62,8 @@ def chunk(documents: list[Document], save_as_file:bool, save_as_list:bool) -> li
                 json.dump(document.metadata, f, ensure_ascii=False)
                 # Print progress
             print(f"Document {index+1}/{len(document_split)} created       {round(((index+1)/len(document_split) * 100), 2)}% Done")
-            
+
     if save_as_list:
         return document_split
-    
+
     return None
