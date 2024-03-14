@@ -33,7 +33,7 @@ def get_documents(path: str) -> list[Document]:
     return docs
 
 
-def save_documents(path: str, documents: list[Document]) -> None:
+def save_documents(path: str, documents: list[Document], source_key: str = "source") -> None:
     """
     Saves a list of Document objects to a specified directory. Each Document object is saved as two files:
     a text file containing the page content and a metadata file in JSON format.
@@ -41,10 +41,11 @@ def save_documents(path: str, documents: list[Document]) -> None:
     Args:
         path (str): The directory where the Document objects will be saved.
         documents (list[Document]): A list of Document objects to be saved.
+        source_key (str): The key in the metadata to use as the source of the document. Defaults to "source".
     """
     os.makedirs(path, exist_ok=True)
     for i, doc in enumerate(documents):
-        source = doc.metadata["source"].split('.')[0]
+        source = doc.metadata.get(source_key, "document").split('.')[0]
         with open(os.path.join(path, f"{source}.{i}.txt"), "w", encoding="utf-8") as file:
             file.write(doc.page_content)
         with open(os.path.join(path, f"{source}.{i}.txt.meta"), "w", encoding="utf-8") as meta_file:
