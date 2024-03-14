@@ -140,9 +140,9 @@ def scrape_quebec_article_page(save_urls: bool = False):
             sub_links = link_getter.get_quebec_sub_links(link)
             links.extend(sub_links)
             print(f"Opening {link}")
-        print(f"{len(links)}\n")
+        print(f"Currently {len(links)} links in total.")
     
     print(f"{len(links)} links in total.")
     
 if __name__ == "__main__":
-    scrape_quebec_article_page(save_urls=True)
+    scrape_quebec_article_page()

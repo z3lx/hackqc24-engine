@@ -43,5 +43,5 @@ def save_txt(content: str, metadata: dict, path: str = "./"):
     """
     with open(f"{path}.txt", 'w', encoding='utf-8') as file:
         file.write(content)
-    with open(f"{path}.meta", 'w', encoding='utf-8') as file:
+    with open(f"{path}.txt.meta", 'w', encoding='utf-8') as file:
         json.dump(metadata, file, ensure_ascii=False)
