@@ -3,8 +3,6 @@ import argparse
 from langchain.docstore.document import Document
 from langchain_text_splitters import TokenTextSplitter
 
-from utils.document import get_documents, save_documents
-
 
 def chunk(documents: list[Document],
           chunk_size: int = 4000, chunk_overlap: int = 200,
@@ -36,6 +34,11 @@ def chunk(documents: list[Document],
 
 
 if __name__ == "__main__":
+    import os
+    import sys
+    sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    from utils.document import get_documents, save_documents
+
     parser = argparse.ArgumentParser(description="Splits a list of documents into chunks.")
     parser.add_argument("--input", type=str, required=True,
                         help="The input directory containing the documents.")
