@@ -20,12 +20,17 @@ def get_documents(path: str) -> list[Document]:
     if not os.path.exists(path):
         raise ValueError(f"Path {path} does not exist")
     try:
-        docs = [
-            Document(
-                page_content=open(os.path.join(path, f), "r", encoding="utf-8").read(),
-                metadata=json.load(open(os.path.join(path, f"{f}.meta"), "r", encoding="utf-8"))
-            ) for f in os.listdir(path) if f.endswith(".txt")
-        ]
+        docs = []
+        for f in os.listdir(path):
+            if not f.endswith(".txt"):
+                continue
+            with open(os.path.join(path, f), "r", encoding="utf-8") as file:
+                page_content = file.read()
+            with open(os.path.join(path, f"{f}.meta"), "r", encoding="utf-8") as meta_file:
+                metadata = json.load(meta_file)
+                if "source" not in metadata:
+                    metadata["source"] = f
+            docs.append(Document(page_content=page_content, metadata=metadata))
     except Exception as e:
         raise ValueError(f"Failed to load documents from {path}: {e}")
     return docs
