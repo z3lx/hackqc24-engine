@@ -153,4 +153,5 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    get_packages(output_dir=args.output_dir, package_list=args.package_list, max_retries=args.max_retries, delay=args.delay)
+    datasets = ["vmtl-communique-presse"]
+    get_packages(output_dir=args.output_dir, package_list=datasets, max_retries=args.max_retries, delay=args.delay)
