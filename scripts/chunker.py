@@ -3,7 +3,7 @@ import argparse
 from langchain.docstore.document import Document
 from langchain_text_splitters import TokenTextSplitter
 
-from document import get_documents, save_documents
+from utils.document import get_documents, save_documents
 
 
 def chunk(documents: list[Document],
