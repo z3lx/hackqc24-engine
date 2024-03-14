@@ -46,7 +46,7 @@ def get_sub_links(url: str, base_url: str, func: callable, verbose: bool = False
                     
         return links
     
-    return error_wrapper(url, action)
+    return error_wrapper(url, action, retry_time=120)
     
 
 def get_quebec_sub_links(url: str, verbose: bool = False, save_format: str = None) -> list:

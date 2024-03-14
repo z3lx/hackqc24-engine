@@ -67,7 +67,7 @@ def scrape(url: str, func: callable, path: str, save_file: bool = True) -> str:
         print(f"Path {path} does not exist. Creating it...")
         os.makedirs(path)
         
-    return error_wrapper(url, response_wrapper, retry_time=60, func=func, path=path, save_file=save_file)
+    return error_wrapper(url, response_wrapper, retry_time=120, func=func, path=path, save_file=save_file)
 
 def scrape_montreal(url: str, path: str, save_file: bool = True) -> str:
     """
@@ -110,9 +110,12 @@ def scrape_quebec(url: str, path: str, save_file: bool = True) -> str:
     
     return scrape(url, func, path, save_file)
     
-def scrape_quebec_article_page():
+def scrape_quebec_article_page(save_urls: bool = False):
     """
     Goes through every link in quebec.ca and keeps opening links until it finds an article to scrape.
+    
+    Args
+        save_urls (bool): If true, will save all the urls visited into a txt file
     """
     
     i = 0
@@ -122,6 +125,10 @@ def scrape_quebec_article_page():
         return None
     
     for link in links:
+        if save_urls:
+            with open("all_quebec_urls", "a", encoding="utf-8") as f:
+                f.write(f"{link}\n")
+                
         content = requests.get(link).text
         page = BeautifulSoup(content, "html.parser")
         if len(page.find_all("a", class_ = "sous-theme-tous section-link")) == 0:
@@ -134,26 +141,8 @@ def scrape_quebec_article_page():
             links.extend(sub_links)
             print(f"Opening {link}")
         print(f"{len(links)}\n")
-
-def write_quebec_links():
-    links = link_getter.get_quebec_base_links()
-    if (links == None):
-        print("Failed to retrieve links")
-        return None
-    
-    for link in links:
-        with open("all_quebec_urls.txt", "a", encoding="utf-8") as f:
-            f.write(f"{link}\n")
-        content = requests.get(link).text
-        page = BeautifulSoup(content, "html.parser")
-        if len(page.find_all("a", class_ = "sous-theme-tous section-link")) != 0:
-            # Add all the relevant sub-links if the page is not an article
-            sub_links = link_getter.get_quebec_sub_links(link)
-            links.extend(sub_links)
-            print(f"Opening {link}")
-        else:
-            print("This is an article, no more links to add.")
     
     print(f"{len(links)} links in total.")
+    
 if __name__ == "__main__":
-    write_quebec_links()
+    scrape_quebec_article_page(save_urls=True)
