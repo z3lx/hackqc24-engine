@@ -34,3 +34,21 @@ def get_documents(path: str) -> list[Document]:
     except Exception as e:
         raise ValueError(f"Failed to load documents from {path}: {e}")
     return docs
+
+
+def save_documents(path: str, documents: list[Document]) -> None:
+    """
+    Saves a list of Document objects to a specified directory. Each Document object is saved as two files:
+    a text file containing the page content and a metadata file in JSON format.
+
+    Args:
+        path (str): The directory where the Document objects will be saved.
+        documents (list[Document]): A list of Document objects to be saved.
+    """
+    os.makedirs(path, exist_ok=True)
+    for i, doc in enumerate(documents):
+        source = doc.metadata["source"].split('.')[0]
+        with open(os.path.join(path, f"{source}.{i}.txt"), "w", encoding="utf-8") as file:
+            file.write(doc.page_content)
+        with open(os.path.join(path, f"{source}.{i}.txt.meta"), "w", encoding="utf-8") as meta_file:
+            json.dump(doc.metadata, meta_file, ensure_ascii=False)
