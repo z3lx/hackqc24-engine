@@ -60,9 +60,9 @@ def get_quebec_sub_links(url: str, verbose: bool = False, save_format: str = Non
         list[str]: list of links
     """
 
-    #get all the anchor tags with the class "sous-theme-page-lien"    
+    #get all the anchor tags with the class "sous-theme-tous section-link"    
     def func(page: BeautifulSoup) -> list:
-        return page.find_all("a", class_="sous-theme-page-lien")
+        return page.find_all("a", class_="sous-theme-tous section-link")
     
     return get_sub_links(url, "https://www.quebec.ca/", func, verbose, save_format)
 
@@ -100,9 +100,11 @@ def get_quebec_base_links(verbose: bool = False, save_format: str = None) -> lis
     
     def func(page: BeautifulSoup) -> list:
         anchor_tags = [];
-        lis = page.find_all('li')
-        for li in lis:
-            anchor_tags.extend(li.find_all('a'))
+        sections = page.find_all('div', class_='col-12 col-md-4')
+        for section in sections:
+            lis = section.find_all("li")
+            for li in lis:
+                anchor_tags.extend(li.find_all('a'))
         return anchor_tags
             
     return get_sub_links("https://www.quebec.ca/plan-du-site", "https://www.quebec.ca/", func, verbose, save_format)
