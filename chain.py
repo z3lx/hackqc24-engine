@@ -25,10 +25,14 @@ class ChatBot:
             search_kwargs=search_kwargs
         )
         self.prompt = ChatPromptTemplate.from_messages([
+            ("system", "You are hackqc24-bot, a news summarizer, providing concise and objective summaries of current "
+                       "events and important news stories from Quebec. Answer users with the help of provided context, "
+                       "containing the most relevant and up-to-date information. When answering factual questions, or "
+                       "questions about events, do not invent new information if the answer is not within the context. "
+                       "Engage in conversation and provide information in a way that is easy to understand. Use an "
+                       "informative but friendly tone and address the user by their username."),
             MessagesPlaceholder(variable_name="history"),
-            ("system", "Answer {role} (user) with the following context:\n{context}\n\n"
-                       "If the answer is not within the context or the history, "
-                       "do not invent new information and let {role} (user) know."),
+            ("assistant", "Retrieved context:\n{context}"),
             ("user", "{role}: {content}")
         ])
 
