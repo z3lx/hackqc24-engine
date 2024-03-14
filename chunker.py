@@ -1,5 +1,9 @@
+import argparse
+
 from langchain.docstore.document import Document
 from langchain_text_splitters import TokenTextSplitter
+
+from document import get_documents, save_documents
 
 
 def chunk(documents: list[Document],
@@ -15,10 +19,9 @@ def chunk(documents: list[Document],
 
     Args:
         documents (list[Document]): The list of documents to be chunked.
-        path (str, optional): The path where the chunked documents will be saved. Defaults to None.
         chunk_size (int, optional): The size of each chunk. Defaults to 4000.
         chunk_overlap (int, optional): The size of the overlap between chunks. Defaults to 200.
-        model_name (str, optional): The name of the model to be used for splitting the documents.
+        model_name (str, optional): The name of the LLM to select the encoding for the token counter.
             Defaults to "gpt-3.5-turbo-0125".
 
     Returns:
@@ -30,3 +33,23 @@ def chunk(documents: list[Document],
         model_name=model_name,
     )
     return splitter.split_documents(documents)
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Process some documents.")
+    parser.add_argument("--input", type=str, required=True,
+                        help="The input directory containing the documents.")
+    parser.add_argument("--output", type=str, required=True,
+                        help="The output directory to save the chunked documents.")
+    parser.add_argument("--chunk-size", type=int, default=4000,
+                        help="The size of each chunk.")
+    parser.add_argument("--chunk-overlap", type=int, default=200,
+                        help="The size of the overlap between chunks.")
+    parser.add_argument("--model-name", type=str, default="gpt-3.5-turbo-0125",
+                        help="The name of the LLM to select the encoding for the token counter.")
+
+    args = parser.parse_args()
+
+    docs = get_documents(path=args.input)
+    docs = chunk(docs, chunk_size=args.chunk_size, chunk_overlap=args.chunk_overlap, model_name=args.model_name)
+    save_documents(path=args.output, documents=docs)
