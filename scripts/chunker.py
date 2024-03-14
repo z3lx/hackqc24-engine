@@ -36,7 +36,7 @@ def chunk(documents: list[Document],
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Process some documents.")
+    parser = argparse.ArgumentParser(description="Splits a list of documents into chunks.")
     parser.add_argument("--input", type=str, required=True,
                         help="The input directory containing the documents.")
     parser.add_argument("--output", type=str, required=True,
