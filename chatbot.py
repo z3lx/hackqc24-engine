@@ -1,12 +1,12 @@
 from operator import itemgetter
-from typing import Dict, Any
+from typing import Dict
 
 import langchain_community.vectorstores as vectorstores
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.runnables import RunnablePassthrough, RunnableLambda
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 
-from history import MessageHistory
+from utils.history import MessageHistory
 
 
 class ChatBot:

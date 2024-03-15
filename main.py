@@ -1,6 +1,6 @@
 import os
 
-from chain import ChatBot
+from chatbot import ChatBot
 
 os.environ["LANGCHAIN_TRACING_V2"] = "true"
 

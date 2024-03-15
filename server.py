@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from langserve import add_routes
 import uvicorn
 
-from chain import ChatBot
+from chatbot import ChatBot
 
 if __name__ == "__main__":
     app = FastAPI(
