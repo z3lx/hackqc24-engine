@@ -1,8 +1,22 @@
 import argparse
+import re
 from typing import List
 
 from langchain_core.documents import Document
 
+
+def filter_content(docs: List[Document]) -> List[Document]:
+    for doc in docs:
+        # Remove leading and trailing whitespaces
+        doc.page_content = doc.page_content.strip()
+
+        # Remove extra whitespaces between words
+        doc.page_content = re.sub(r"\s+", " ", doc.page_content)
+
+        # Remove space before punctuation
+        doc.page_content = re.sub(r"\s([.,:;?!])", r"\1", doc.page_content)
+
+    return docs
 
 def filter_metadata(docs: List[Document], keys: List[str]) -> List[Document]:
     """
@@ -31,11 +45,13 @@ if __name__ == "__main__":
                         help="The input directory containing the documents.")
     parser.add_argument("--output", type=str, required=True,
                         help="The output directory to save the filtered documents.")
-    parser.add_argument("--keys", type=str, nargs='+', required=True,
+    parser.add_argument("--keys", type=str, nargs='+',
                         help="The keys to keep in the metadata.")
 
     args = parser.parse_args()
 
     docs = get_documents(path=args.input)
-    docs = filter_metadata(docs=docs, keys=args.keys)
+    docs = filter_content(docs=docs)
+    if args.keys:
+        docs = filter_metadata(docs=docs, keys=args.keys)
     save_documents(path=args.output, documents=docs)
