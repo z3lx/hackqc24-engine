@@ -9,13 +9,12 @@ def filter_content(docs: List[Document]) -> List[Document]:
     for doc in docs:
         # Remove leading and trailing whitespaces
         doc.page_content = doc.page_content.strip()
-
         # Remove extra whitespaces between words
         doc.page_content = re.sub(r"\s+", " ", doc.page_content)
-
         # Remove space before punctuation
         doc.page_content = re.sub(r"\s([.,:;?!])", r"\1", doc.page_content)
-
+        # Ensure there's a space after punctuation
+        doc.page_content = re.sub(r"([.,:;?!])(\S)", r"\1 \2", doc.page_content)
     return docs
 
 def filter_metadata(docs: List[Document], keys: List[str]) -> List[Document]:
