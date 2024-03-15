@@ -32,15 +32,16 @@ class ChatBot:
                        "Engage in conversation and provide information in a way that is easy to understand. Use an "
                        "informative but friendly tone and address the user by their username."),
             MessagesPlaceholder(variable_name="history"),
-            ("assistant", "Retrieved context:\n{context}"),
+            ("system", "Retrieved context:\n{context}\n\nReturn the sources as links of the provided documents."),
             ("user", "{role}: {content}")
         ])
 
         self.main = (
-            {"context": itemgetter("content") | self.retriever,
-             "role": itemgetter("role"),
-             "content": itemgetter("content")
-             }
+            {
+                "context": itemgetter("content") | self.retriever,
+                "role": itemgetter("role"),
+                "content": itemgetter("content")
+            }
             | RunnablePassthrough.assign(
                 history=RunnableLambda(self.history.load_messages) | itemgetter("history")
             )
