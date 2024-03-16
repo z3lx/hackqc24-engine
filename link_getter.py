@@ -1,7 +1,8 @@
 from bs4 import BeautifulSoup
-from data_utils import save_json, save_csv
+import json
+import csv
 import validators
-from error import error_wrapper
+from utils.error import error_wrapper
 
 def get_sub_links(url: str, base_url: str, func: callable, verbose: bool = False, save_format: str = None) -> list[str]:
     """
@@ -38,9 +39,16 @@ def get_sub_links(url: str, base_url: str, func: callable, verbose: bool = False
                 if condition: links.append(base_url + a.get("href"))
                     
         if save_format == "json":
-            save_json(links, "base-links")
+            with open("base-links.json", "w", encoding="utf-8") as file:
+                json.dump(links, file, indent=2, ensure_ascii=False)
+                print("Saved to base-links.json")
         elif save_format == "csv":
-            save_csv(links, "base-links")
+            with open("base-links.csv", "w", encoding="utf-8") as file:
+                writer = csv.writer(file)
+                writer.writerow(["url"])
+                for link in links:
+                    writer.writerow([link])
+                print("Saved to base-links.csv")
         elif save_format != None:
             print(f"Save format {save_format} is not supported")    
                     
@@ -108,6 +116,26 @@ def get_quebec_base_links(verbose: bool = False, save_format: str = None) -> lis
         return anchor_tags
             
     return get_sub_links("https://www.quebec.ca/plan-du-site", "https://www.quebec.ca/", func, verbose, save_format)
+
+def get_montreal_base_links(verbose: bool = False, save_format: str = None) -> list:
+    """
+    Extract all the links from the base level of montreal website
+
+    Args:
+        url (str, optional): The url to scrape. Defaults to "https://montreal.ca/plan-du-site".
+        base_url (str, optional): The base url of the website. Defaults to "https://montreal.ca/".
+        verbose (bool, optional): If True, returns a list of dictionaries with the url and the links. Defaults to False.
+        save_format (str, optional): If not None, saves the links to a file. Defaults to None.
+
+    Returns:
+        list: list of links
+    """
+    
+    def func(page: BeautifulSoup) -> list:
+        anchor_tags = page.find_all('a', class_ = "link-list-element")
+        return anchor_tags
+    
+    return get_sub_links("https://montreal.ca/", "https://montreal.ca/", func, verbose, save_format)
         
 if __name__ == "__main__":
     get_quebec_base_links(save_format="json")
