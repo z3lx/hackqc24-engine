@@ -1,9 +1,9 @@
 import csv
 from langchain.schema.document import Document
 import web_scraper
-from data_utils import save_txt
+from utils.document import save_documents
 
-def parse_dataset(dataset_path:str) -> list[list[str]]:
+def parse_csv_dataset(dataset_path:str) -> list[list[str]]:
     """
     Parses a CSV dataset.
     
@@ -23,7 +23,7 @@ def parse_dataset(dataset_path:str) -> list[list[str]]:
     
     return dataset
 
-def create_metadata(row:list[str], format:dict) -> dict:
+def create_csv_metadata(row:list[str], format:dict) -> dict:
     """
     Creates the metadata for a specific row in a CSV file.
     
@@ -45,16 +45,16 @@ def create_metadata(row:list[str], format:dict) -> dict:
     
     return metadata
 
-def create_documents(dataset: list[list[str]], format:dict, index_of_description: int, save_as_file:bool, save_as_list:bool) -> list[Document]:
+def create_documents_from_csv(dataset: list[list[str]], format:dict, index_of_description: int, save_path:str = "chunks", save_as_list:bool = True) -> list[Document]:
     """
-    Creates a Document from for every row in a CSV dataset
+    Creates a Document for every row in a CSV dataset
     
     Args:
         dataset (list[list[[str]]): The CSV file we want to create Documents for, must contain a list of rows, each row containing a list of information
-        format (dict): The way the metadata is stored in a particular CSV file, type_of_information:index (ie: {title:0, publication date:1, url:2})
-        index_of_description (int): Index of where the information is in the CSV file
-        save_as_file (boolean): Says if we want to write all the chunks as txt and json files, writes in "chunks" project directory.
-        save_as_list (boolean): Says if we want to save all the chunks as a list of Documents in memory.
+        format (dict): The way the metadata is stored in a particular CSV file: type_of_information:index (ie: {title:0, publication date:1, url:2})
+        index_of_description (int): Index of where the information is in the CSV file.
+        save_path (str): Directory where we want to save the documents (txt/meta files). If none, document's won't be saved. Defaults to "chunks"
+        save_as_list (boolean): If we want to save all the chunks as a list of Documents in memory. Defaults to True
         
     Returns:
         list[Document]: A list of Documents if save_as_list is true, returns Nothing otherwise.
@@ -63,23 +63,32 @@ def create_documents(dataset: list[list[str]], format:dict, index_of_description
     documents = []
     
     for index, row in enumerate(dataset): 
-        metadata = create_metadata(row, format)
-        page_content = row[index_of_description]
-        if format["url"] is not None:
+        # If the csv contains a url source, create Document by scraping it
+        try:
             index_of_url = format["url"]
             url = row[index_of_url]
-            page_content += web_scraper.scrape_montreal(url)
+            print(f"Scarping {url}")
+            if url.startswith("https://montreal.ca"):
+                document = web_scraper.scrape_montreal(url)
+                continue
+            elif url.startswith("https://quebec.ca"):
+                document = web_scraper.scrape_quebec(url)
+                continue
+            else:
+                print("This Domain is not supported at the moment")
+                raise KeyError
+                
+        # Create Document using csv otherwise
+        except KeyError:
+            metadata = create_csv_metadata(row, format)
+            page_content = row[index_of_description]
+            document = Document(page_content=page_content, metadata=metadata)
+
+        documents.append(document)
         
-        if save_as_file:
-            save_txt(page_content, metadata, f"chunks/document{index}")
-            print(f"Document {index+1}/{len(dataset)} created       {round(((index+1)/len(dataset) * 100), 2)}% Done")
-                    
-        if save_as_list:
-            document = Document(page_content=page_content)
-            document.metadata = metadata
-            documents.append(document)
-        
-    if save_as_file:
+    if save_path is not None:
+        save_documents("chunks", documents, source_key=None)
+    if save_as_list:
         return documents
     return None
 

@@ -122,7 +122,7 @@ def scrape_articles(links: list[str], scrape_func: callable, sublink_func: calla
             print(f"Opening {link}")
             links.extend(sub_links)
                         
-        print(f"Currently {len(links)} links in total.")
+        print(f"Currently {len(links)} links in total.\n")
         
     print(f"{len(links)} links in total.")
 
@@ -156,6 +156,7 @@ def scrape_montreal_articles(path: str = "chunks", save_urls: bool = False):
     scrape_articles(links, scrape_montreal, link_getter.get_montreal_sub_links, save_urls, path)
     
 if __name__ == "__main__":
+    scrape_quebec_articles(save_urls=True)
     parser = argparse.ArgumentParser(description="Filter documents metadata.")
     parser.add_argument("--site", type=str, required=True,
                         help="The website to scrape. Either 'montreal' or 'quebec'.")
