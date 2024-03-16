@@ -1,7 +1,9 @@
 from operator import itemgetter
-from typing import Dict
+from typing import Dict, Union
 
 import langchain_community.vectorstores as vectorstores
+from langchain_core.messages import BaseMessage
+from langchain_core.prompt_values import ChatPromptValue
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.runnables import RunnablePassthrough, RunnableLambda
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
@@ -25,15 +27,24 @@ class ChatBot:
             search_kwargs=search_kwargs
         )
         self.prompt = ChatPromptTemplate.from_messages([
-            ("system", "You are hackqc24-bot, a news summarizer, providing concise and objective summaries of current "
-                       "events and important news stories from Quebec. Answer users with the help of provided context, "
-                       "containing the most relevant and up-to-date information. When answering factual questions, or "
-                       "questions about events, do not invent new information if the answer is not within the context. "
-                       "Engage in conversation and provide information in a way that is easy to understand. Use an "
-                       "informative but friendly tone and address the user by their username."),
+            (
+                "system",
+                "You are hackqc24-bot, a news summarizer, providing concise and objective summaries of current "
+                "events and important news stories from Quebec. Answer users with the help of provided context, "
+                "containing the most relevant and up-to-date information. When answering factual questions, or "
+                "questions about events, do not invent new information if the answer is not within the context. "
+                "Engage in conversation and provide information in a way that is easy to understand. Use an "
+                "informative but friendly tone and address the user by their username."
+            ),
             MessagesPlaceholder(variable_name="history"),
-            ("system", "Retrieved context:\n{context}\n\nReturn the sources as links of the provided documents."),
-            ("user", "{role}: {content}")
+            (
+                "system",
+                "Retrieved context:\n{context}\n\nReturn the sources as links of the provided documents."
+            ),
+            (
+                "user",
+                "{role}: {content}"
+            )
         ])
 
         self.main = (
@@ -46,40 +57,25 @@ class ChatBot:
                 history=RunnableLambda(self.history.load_messages) | itemgetter("history")
             )
             | self.prompt
+            | RunnableLambda(self._add_message)  # Save user response to history
             | self.model
+            | RunnableLambda(self._add_message)  # Save AI response to history
         )
 
-        self.add_human_message = (
-            {"role": itemgetter("role"), "content": itemgetter("content")}
-            | RunnableLambda(self._add_human_message)
-        )
-
-        self.add_ai_message = (
-            itemgetter("content")
-            | RunnableLambda(self._add_ai_message)
-        )
-
-    def _add_human_message(self, _dict: Dict[str, str]) -> str:
-        role = _dict["role"]
-        content = _dict["content"]
-        self.history.add_human_message(content=f"{role}: {content}")
-        return ""
-
-    def _add_ai_message(self, content: str) -> str:
-        self.history.add_ai_message(content=content)
-        return ""
+    def _add_message(self, input: Union[BaseMessage, ChatPromptValue]) \
+            -> Union[BaseMessage, ChatPromptValue]:
+        message = None
+        if isinstance(input, BaseMessage):
+            message = input
+        elif isinstance(input, ChatPromptValue):
+            message = input.to_messages()[-1]
+        if message:
+            self.history.add_message(message)
+        return input
 
     def get_response(self, message: str) -> str:
-        response = self.main.invoke(message).content
-        self.history.add_human_message(content=message)
-        self.history.add_ai_message(content=response)
+        response = self.main.invoke({"role": "user", "content": message}).content
         return response
 
     def get_main(self):
         return self.main
-
-    def get_add_human_message(self):
-        return self.add_human_message
-
-    def get_add_ai_message(self):
-        return self.add_ai_message
