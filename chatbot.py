@@ -1,7 +1,9 @@
+import json
 from operator import itemgetter
-from typing import Dict, Union
+from typing import Dict, Union, List
 
 import langchain_community.vectorstores as vectorstores
+from langchain_core.documents import Document
 from langchain_core.messages import BaseMessage
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompt_values import ChatPromptValue
@@ -40,7 +42,7 @@ class ChatBot:
             MessagesPlaceholder(variable_name="history"),
             (
                 "system",
-                "Retrieved context:\n{context}\n\nReturn the sources as links of the provided documents."
+                "Retrieved documents:\n\n{docs}\n\nReturn the sources as links of the provided documents."
             ),
             (
                 "user",
@@ -48,10 +50,9 @@ class ChatBot:
             )
         ])
 
-        # retriever put as source
         self.main = (
             {
-                "context": itemgetter("content") | self.retriever,
+                "docs": itemgetter("content") | self.retriever | RunnableLambda(self._format_docs),
                 "role": itemgetter("role"),
                 "content": itemgetter("content")
             }
@@ -64,6 +65,14 @@ class ChatBot:
             | RunnableLambda(self._add_message)  # Save AI response to history
             | StrOutputParser()
         )
+
+    def _format_docs(self, docs: List[Document]) -> str:
+        docs_list = []
+        for doc in docs:
+            doc_dict = doc.metadata
+            doc_dict["content"] = doc.page_content
+            docs_list.append(doc_dict)
+        return json.dumps(docs_list, ensure_ascii=False)
 
     def _add_message(self, input: Union[BaseMessage, ChatPromptValue]) \
             -> Union[BaseMessage, ChatPromptValue]:
