@@ -3,6 +3,7 @@ from typing import Dict, Union
 
 import langchain_community.vectorstores as vectorstores
 from langchain_core.messages import BaseMessage
+from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompt_values import ChatPromptValue
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.runnables import RunnablePassthrough, RunnableLambda
@@ -47,6 +48,7 @@ class ChatBot:
             )
         ])
 
+        # retriever put as source
         self.main = (
             {
                 "context": itemgetter("content") | self.retriever,
@@ -60,6 +62,7 @@ class ChatBot:
             | RunnableLambda(self._add_message)  # Save user response to history
             | self.model
             | RunnableLambda(self._add_message)  # Save AI response to history
+            | StrOutputParser()
         )
 
     def _add_message(self, input: Union[BaseMessage, ChatPromptValue]) \
@@ -74,7 +77,7 @@ class ChatBot:
         return input
 
     def get_response(self, message: str) -> str:
-        response = self.main.invoke({"role": "user", "content": message}).content
+        response = self.main.invoke({"role": "user", "content": message})
         return response
 
     def get_main(self):
