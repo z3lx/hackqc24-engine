@@ -2,6 +2,8 @@ import csv
 from langchain.schema.document import Document
 import web_scraper
 from utils.document import save_documents
+import argparse
+import json
 
 def parse_csv_dataset(dataset_path:str) -> list[list[str]]:
     """
@@ -85,3 +87,18 @@ def create_documents_from_csv(dataset: list[list[str]], format: dict, index_of_d
     return documents
 
 
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Process CSV Dataset into Documents.")
+    parser.add_argument("--input", type=str, required=True,
+                        help="The input directory of the CSV file.")
+    # For the format, you need to enter it as so: '{\"info1\":0,\"info2\":1,\"info3\":2}'
+    parser.add_argument("--format", type=json.loads, required=True,
+                        help="Format of the CSV (enter it as so: '{\\\"title\\\":0,\\\"date\\\":1...}')")
+    parser.add_argument("--description", type=int, required=True,
+                        help="Index of the description column in the CSV file.")
+    parser.add_argument("--output", type=str, required=False,
+                        help="The output directory to save the Documents made from the CSV.")
+    
+    args = parser.parse_args()
+    dataset = parse_csv_dataset(args.input)
+    create_documents_from_csv(dataset, args.format, args.description, args.output)
