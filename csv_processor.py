@@ -70,10 +70,10 @@ def create_documents_from_csv(dataset: list[list[str]], format:dict, index_of_de
             print(f"Scarping {url}")
             if url.startswith("https://montreal.ca"):
                 document = web_scraper.scrape_montreal(url)
-                continue
+                
             elif url.startswith("https://quebec.ca"):
                 document = web_scraper.scrape_quebec(url)
-                continue
+
             else:
                 print("This Domain is not supported at the moment")
                 raise KeyError
