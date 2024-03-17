@@ -104,7 +104,6 @@ def scrape_articles(links: list[str], scrape_func: callable, sublink_func: calla
         print("No links to scrape.")
         return None
     
-    i: int = 0
     docs: list[Document] = []
     for link in links:
         if save_urls:
@@ -118,8 +117,6 @@ def scrape_articles(links: list[str], scrape_func: callable, sublink_func: calla
             print(f"Scraping {link}")
             doc = scrape_func(link)
             docs.append(doc)
-            i += 1
-        # Add sub links
         else:
             print(f"Opening {link}")
             links.extend(sub_links)
@@ -128,7 +125,7 @@ def scrape_articles(links: list[str], scrape_func: callable, sublink_func: calla
         
     print(f"{len(links)} links in total.")
 
-    print(f"Saving {i} documents to {path}.")
+    print(f"Saving {len(docs)} documents to {path}.")
     save_documents(path, docs)
     
 def scrape_quebec_articles(path: str = "chunks", save_urls: bool = False):
@@ -161,9 +158,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Filter documents metadata.")
     parser.add_argument("--site", type=str, required=True,
                         help="The website to scrape. Either 'montreal' or 'quebec'.")
-    parser.add_argument("--path", type=str, required=False,
+    parser.add_argument("--path", type=str, required=True,
                         help="The output directory to save the filtered documents.")
-    parser.add_argument("--save_urls", type=bool, required=False,
+    parser.add_argument("--save_urls", type=bool, required=True,
                         help="If True, saves the urls visited to a file.")
     
     args = parser.parse_args()
@@ -171,6 +168,7 @@ if __name__ == "__main__":
     if args.site == "montreal":
         scrape_montreal_articles(args.path, args.save_urls)
     elif args.site == "quebec":
+        
         scrape_quebec_articles(args.path, args.save_urls)
     else:
         print("Invalid site. Please choose either 'montreal' or 'quebec'.")
