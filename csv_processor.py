@@ -45,7 +45,7 @@ def create_csv_metadata(row:list[str], format:dict) -> dict:
     
     return metadata
 
-def create_documents_from_csv(dataset: list[list[str]], format:dict, index_of_description: int, save_path:str = "chunks", save_as_list:bool = True) -> list[Document]:
+def create_documents_from_csv(dataset: list[list[str]], format: dict, index_of_description: int, save_path: str = "chunks") -> list[Document]:
     """
     Creates a Document for every row in a CSV dataset
     
@@ -54,67 +54,34 @@ def create_documents_from_csv(dataset: list[list[str]], format:dict, index_of_de
         format (dict): The way the metadata is stored in a particular CSV file: type_of_information:index (ie: {title:0, publication date:1, url:2})
         index_of_description (int): Index of where the information is in the CSV file.
         save_path (str): Directory where we want to save the documents (txt/meta files). If none, document's won't be saved. Defaults to "chunks"
-        save_as_list (boolean): If we want to save all the chunks as a list of Documents in memory. Defaults to True
         
     Returns:
-        list[Document]: A list of Documents if save_as_list is true, returns Nothing otherwise.
+        list[Document]: A list of Documents created from the CSV file.
     """
     
     documents = []
     
-    for index, row in enumerate(dataset): 
+    for row in dataset: 
         # If the csv contains a url source, create Document by scraping it
-        try:
-            index_of_url = format["url"]
-            url = row[index_of_url]
-            print(f"Scarping {url}")
-            if url.startswith("https://montreal.ca"):
-                document = web_scraper.scrape_montreal(url)
-                
-            elif url.startswith("https://quebec.ca"):
-                document = web_scraper.scrape_quebec(url)
-
-            else:
-                print("This Domain is not supported at the moment")
-                raise KeyError
-                
-        # Create Document using csv otherwise
-        except KeyError:
+        
+        index_of_url = format["url"]
+        url = row[index_of_url]
+        print(f"Scraping {url}")
+        if url.startswith("https://montreal.ca"):
+            document = web_scraper.scrape_montreal(url)
+        elif url.startswith("https://quebec.ca"):
+            document = web_scraper.scrape_quebec(url)
+        else:
+            print("This Domain is not supported at the moment")
             metadata = create_csv_metadata(row, format)
             page_content = row[index_of_description]
             document = Document(page_content=page_content, metadata=metadata)
-
+                
         documents.append(document)
         
     if save_path is not None:
-        save_documents("chunks", documents, source_key=None)
-    if save_as_list:
-        return documents
-    return None
+        save_documents(save_path, documents, None)
+        
+    return documents
 
-def txt_to_csv(input_file: str, output_file: str):
-    """
-    Convert a text file to a CSV file.
 
-    Args:
-        input_file (str): Path to the input text file.
-        output_file (str): Path to the output CSV file.
-    """
-    # Open the input file for reading
-    lines: list[str]
-    with open(input_file, 'r', encoding="utf-8") as file:
-        lines = file.readlines()
-
-    # Process the lines and convert them to CSV format
-    csv_lines = []
-    for line in lines:
-        # Split the line into fields (assuming comma-separated values)
-        fields = line.strip().split(',')
-
-        # Add the fields to the CSV lines
-        csv_lines.append(','.join(fields))
-
-    # Open the output file for writing
-    with open(output_file, 'w', encoding="utf-8") as file:
-        # Write the CSV lines to the output file
-        file.write('\n'.join(csv_lines))
