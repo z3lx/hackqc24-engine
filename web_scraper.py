@@ -113,11 +113,13 @@ def scrape_articles(links: list[str], scrape_func: callable, sublink_func: calla
         
         sub_links = sublink_func(link)
         
+        # Scrape if current link is an article
         if len(sub_links) == 0:
             print(f"Scraping {link}")
             doc = scrape_func(link)
             docs.append(doc)
             i += 1
+        # Add sub links
         else:
             print(f"Opening {link}")
             links.extend(sub_links)
@@ -142,7 +144,7 @@ def scrape_quebec_articles(path: str = "chunks", save_urls: bool = False):
     
 def scrape_montreal_articles(path: str = "chunks", save_urls: bool = False):
     """
-    Goes through every link in quebec.ca and keeps opening links until it finds an article to scrape.
+    Goes through every link in montreal.ca and keeps opening links until it finds an article to scrape.
     
     Args
         save_urls (bool): If true, will save all the urls visited into a txt file
@@ -156,7 +158,6 @@ def scrape_montreal_articles(path: str = "chunks", save_urls: bool = False):
     scrape_articles(links, scrape_montreal, link_getter.get_montreal_sub_links, save_urls, path)
     
 if __name__ == "__main__":
-    scrape_quebec_articles(save_urls=True)
     parser = argparse.ArgumentParser(description="Filter documents metadata.")
     parser.add_argument("--site", type=str, required=True,
                         help="The website to scrape. Either 'montreal' or 'quebec'.")
