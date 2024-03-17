@@ -30,16 +30,4 @@ if __name__ == "__main__":
         path="/main",
     )
 
-    add_routes(
-        app,
-        bot.get_add_human_message(),
-        path="/add_human_message",
-    )
-
-    add_routes(
-        app,
-        bot.get_add_ai_message(),
-        path="/add_ai_message",
-    )
-
     uvicorn.run(app, host="localhost", port=8000)
